@@ -1,7 +1,12 @@
 CFLAGS = -ansi -pedantic -Wall -Wno-unused-result
 LIBS = -lm
 
+DEBUG = false
 DEPS = args.o prompt.o builtin.o proc.o ustring.o utils.o
+
+ifeq ($(DEBUG), true)
+	CFLAGS += -g
+endif
 
 rsh: main.o $(DEPS)
 	gcc $^ -o $@ $(LIBS)

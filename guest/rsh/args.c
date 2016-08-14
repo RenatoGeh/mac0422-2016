@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
+
 args_t *create_args(string_t *cmd) {
   int c, i, j, n, l;
   char *ptr;
@@ -16,6 +18,7 @@ args_t *create_args(string_t *cmd) {
       ++c;
       l = 0;
     } else l = 1;
+  ++c;
   /* Create new args_t. */
   args = (args_t*) malloc(sizeof(args_t));
   args->c = c;

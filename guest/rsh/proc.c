@@ -11,6 +11,9 @@
 #include "utils.h"
 #include "args.h"
 #include "ustring.h"
+#include "prompt.h"
+
+#define MAX_ARGS 50
 
 int proc_exec(args_t *args) {
   int i;
@@ -18,18 +21,25 @@ int proc_exec(args_t *args) {
   char **argv;
   char *const env[] = {NULL};
 
-  argv = (char**) malloc(args->c * sizeof(char*));
+  argv = (char**) malloc((args->c+1) * sizeof(char*));
   for (i = 0; i < args->c; ++i)
     argv[i] = args->s[i]->str;
+  argv[args->c] = NULL;
 
   if ((chid = fork()) < 0) {
     PRINT_ERR();
     return -1;
-  } else if (!chid) {
+  } else if (chid == 0) {
     /* Child process. */
-    execve(args->s[0]->str, argv, env);
-    puts("Something terrible has occured!");
-    return 1;
+    if (execve(args->s[0]->str, argv, env)) {
+      printf("%s: command not found.\n", args->s[0]->str);
+      PRINT_ERR();
+      prompt_send_status(1);
+      exit(1);
+    } else {
+      prompt_send_status(0);
+      exit(0);
+    }
   }
 
   /* Parent process. */

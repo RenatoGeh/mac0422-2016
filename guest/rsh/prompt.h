@@ -24,4 +24,7 @@ int prompt_readline(prompt_t *p);
 /* Prints the prompt. */
 void prompt_print(prompt_t *p);
 
+/* Sends last exit result status. */
+void prompt_send_status(int s);
+
 #endif /* _PROMPT_H_ */

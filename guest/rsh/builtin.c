@@ -10,10 +10,13 @@
 #include "args.h"
 #include "ustring.h"
 
-#define SIZE_LIST_CMDS 4
+#define SIZE_LIST_CMDS 6
 const char *_list_cmds[] = {
-  "cd", "ls", "pwd", "exit",
+  "cd", "ls", "pwd", "exit", "true", "false",
 };
+
+static int builtin_true(args_t *args) { return 0; }
+static int builtin_false(args_t *args) { return 1; }
 
 static int builtin_cd(args_t *args) {
   return 1;
@@ -35,13 +38,17 @@ static int builtin_ls(args_t *args) {
     GET_PWD(path);
   } else
     strcpy(path, args->s[1]->str);
+
   dir = opendir(path);
   if (dir == NULL) {
     puts("Failed to read directory.");
     return 1;
   }
+
   while ((dent = readdir(dir)) != NULL)
-    printf("%s\n", dent->d_name);
+    if (strcmp(dent->d_name, ".") && strcmp(dent->d_name, ".."))
+      printf("%s\n", dent->d_name);
+
   closedir(dir);
 
   return 0;
@@ -66,7 +73,7 @@ int builtin_contains(args_t *args) {
 }
 
 int (*_list_funcs[SIZE_LIST_CMDS])(args_t *args) = {
-  builtin_cd, builtin_ls, builtin_pwd, builtin_exit,
+  builtin_cd, builtin_ls, builtin_pwd, builtin_exit, builtin_true, builtin_false,
 };
 
 int builtin_exec(args_t *args) {

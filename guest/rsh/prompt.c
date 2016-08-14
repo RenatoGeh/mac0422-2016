@@ -40,13 +40,34 @@ int prompt_readline(prompt_t *p) {
   string_t *cmd;
   args_t *args;
   char line[BUFFER_SIZE];
-  int res;
+  int len, res, i;
+  char *errline;
 
-  if (fgets(line, BUFFER_SIZE, stdin) == NULL) {
-    puts("Line too long for buffer!");
-    return 1;
+  errline = fgets(line, BUFFER_SIZE, stdin);
+  if (line[0] == '\n' || line[0] == '\0')
+    return _lres = 0;
+  if (errline == NULL) {
+    if (feof(stdin)) {
+      putchar('\n');
+      return _lres = 0;
+    } else {
+      puts("Line too long for buffer!");
+      return _lres = 1;
+    }
   }
-  cmd = copy_string(line, strlen(line));
+
+  len = strlen(line) - 1;
+
+  for (res = i = 0; i < len; ++i)
+    if (line[i] != ' ')
+      res = 1;
+  if (!res)
+    return _lres = 0;
+
+  if (len < 0)
+    return _lres = 0;
+  line[len] = '\0';
+  cmd = copy_string(line, len);
   args = create_args(cmd);
 
   res = builtin_exec(args);
@@ -62,4 +83,8 @@ int prompt_readline(prompt_t *p) {
 void prompt_print(prompt_t *p) {
   prompt_update(p);
   printf("[%d] %s $> ", _lres, p->str);
+}
+
+void prompt_send_status(int s) {
+  _lres = s;
 }
