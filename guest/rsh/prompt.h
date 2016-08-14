@@ -1,11 +1,12 @@
 #ifndef _PROMPT_H_
 #define _PROMPT_H_
 
+#include "utils.h"
+
 /* Prompt type. */
 typedef struct {
-  char *str;
+  char str[BUFFER_SIZE];
   int len;
-  int cap;
 } prompt_t;
 
 /* Creates a prompt_t with the current pwd. */
@@ -15,7 +16,7 @@ prompt_t *create_prompt(void);
 void free_prompt(prompt_t *p);
 
 /* Updates prompt_t p with the current pwd. */
-void prompt_update(prompt_t *p);
+int prompt_update(prompt_t *p);
 
 /* Reads a line and runs it. */
 int prompt_readline(prompt_t *p);

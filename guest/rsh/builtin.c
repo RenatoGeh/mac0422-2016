@@ -6,23 +6,16 @@
 #include <unistd.h>
 #include <dirent.h>
 
+#include "utils.h"
 #include "args.h"
 #include "ustring.h"
 
 #define BUFFER_SIZE 1024
 
-/* Stores pwd in str. If an error occurs, prints it out. */
-#define GET_PWD(str) if (getcwd((str), BUFFER_SIZE) == NULL) {\
-  if (errno != ERANGE)\
-    printf("Error %d! Error message:\n  %s\n", errno, strerr(errno));\
-  else\
-    puts("Line too long for buffer size!");\
-  return errno;}
-
-#define SIZE_LIST_CMDS 4;
+#define SIZE_LIST_CMDS 4
 const char *_list_cmds[] = {
   "cd", "ls", "pwd", "exit",
-}
+};
 
 static int builtin_cd(args_t *args) {
   return 1;
@@ -40,7 +33,7 @@ static int builtin_ls(args_t *args) {
   DIR *dir;
   struct dirent *dent;
 
-  if (args->c < 2 || !strcmp(args->s[1], "."))
+  if (args->c < 2 || !strcmp(args->s[1]->str, "."))
     GET_PWD(path);
   dir = opendir(path);
   if (dir == NULL) {
@@ -57,7 +50,7 @@ static int builtin_ls(args_t *args) {
 static int builtin_exit(args_t *args) {
   int arg = 0;
   if (args->c > 1)
-    arg = atoi(args->s[1]);
+    arg = atoi(args->s[1]->str);
   exit(arg);
   return arg;
 }
@@ -65,7 +58,7 @@ static int builtin_exit(args_t *args) {
 int builtin_contains(args_t *args) {
   char *name;
   int i;
-  name = args->s[0];
+  name = args->s[0]->str;
   for (i = 0; i < SIZE_LIST_CMDS; ++i)
     if (!strcmp(name, _list_cmds[i]))
       return i;
@@ -76,7 +69,7 @@ int (*_list_funcs[SIZE_LIST_CMDS])(args_t *args) = {
   builtin_cd, builtin_ls, builtin_pwd, builtin_exit,
 };
 
-int builtin_exec(args_t *args0) {
+int builtin_exec(args_t *args) {
   int index;
   index = builtin_contains(args);
   if (index < 0)
