@@ -12,10 +12,6 @@
 #include "builtin.h"
 #include "proc.h"
 
-#define MIN_PROMPT_LEN 8
-#define MAX_MEM 1024
-#define MIN_MEM MIN_PROMPT_LEN
-
 /* Last exit result. */
 static int _lres = 0;
 
@@ -43,10 +39,9 @@ int prompt_update(prompt_t *p) {
 int prompt_readline(prompt_t *p) {
   string_t *cmd;
   args_t *args;
-  char *line;
+  char line[BUFFER_SIZE];
   int res;
 
-  line = (char*) malloc(BUFFER_SIZE * sizeof(char));
   if (fgets(line, BUFFER_SIZE, stdin) == NULL) {
     puts("Line too long for buffer!");
     return 1;
@@ -58,7 +53,6 @@ int prompt_readline(prompt_t *p) {
   if (res < 0)
     res = proc_exec(args);
 
-  free(line);
   free_args(args);
   free_string(cmd);
 

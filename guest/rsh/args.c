@@ -12,7 +12,7 @@ args_t *create_args(string_t *cmd) {
   l = 0;
   /* Count number of tokens. */
   for (i = c = 0; i < n; ++i)
-    if (cmd->str[i] = ' ' && l) {
+    if (cmd->str[i] == ' ' && l) {
       ++c;
       l = 0;
     } else l = 1;

@@ -10,8 +10,6 @@
 #include "args.h"
 #include "ustring.h"
 
-#define BUFFER_SIZE 1024
-
 #define SIZE_LIST_CMDS 4
 const char *_list_cmds[] = {
   "cd", "ls", "pwd", "exit",
@@ -33,8 +31,10 @@ static int builtin_ls(args_t *args) {
   DIR *dir;
   struct dirent *dent;
 
-  if (args->c < 2 || !strcmp(args->s[1]->str, "."))
+  if (args->c < 2 || !strcmp(args->s[1]->str, ".")) {
     GET_PWD(path);
+  } else
+    strcpy(path, args->s[1]->str);
   dir = opendir(path);
   if (dir == NULL) {
     puts("Failed to read directory.");

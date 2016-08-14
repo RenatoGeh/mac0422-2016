@@ -16,6 +16,8 @@
     puts("Line too long for buffer size!");\
   return errno;}
 
+#define PRINT_ERR() printf("Error %d! Error message:\n  %s\n", errno, strerror(errno))
+
 /* Preproc max function. */
 #define MAX(a, b) (((a)<(b))?(b):(a))
 
@@ -23,9 +25,9 @@
 #define MIN(a, b) (((a)>(b))?(b):(a))
 
 /* Integer max function. */
-inline int imax(int a, int b) { return a < b ? b : a; }
+int imax(int a, int b);
 
 /* Integer min function. */
-inline int imin(int a, int b) { return a > b ? b : a; }
+int imin(int a, int b);
 
 #endif /* _UTILS_H_ */
