@@ -14,6 +14,9 @@ typedef struct {
 /* Creates an argument struct given command cmd. */
 args_t *create_args(string_t *cmd);
 
+/* Adds argument e to args_t* a. */
+args_t *args_add(args_t *a, string_t *s);
+
 /* Frees memory from args_t a. */
 void free_args(args_t *a);
 

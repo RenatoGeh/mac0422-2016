@@ -8,19 +8,19 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
 endif
 set shortmess=aoO
 badd +1 args.c
-badd +1 args.h
+badd +18 args.h
 badd +1 builtin.c
-badd +12 builtin.h
+badd +11 builtin.h
 badd +23 Makefile
 badd +8 proc.h
 badd +1 prompt.c
-badd +2 prompt.h
+badd +29 prompt.h
 badd +1 ustring.c
 badd +23 ustring.h
-badd +19 utils.h
+badd +32 utils.h
 badd +1 proc.c
 badd +1 utils.c
-badd +4 main.c
+badd +10 main.c
 badd +487 ~/.janus/vim-airline/doc/airline.txt
 argglobal
 silent! argdel *
@@ -58,12 +58,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 4 - ((3 * winheight(0) + 29) / 58)
+let s:l = 18 - ((17 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-4
-normal! 0
+18
+normal! 041|
 wincmd w
 argglobal
 edit args.c
@@ -76,12 +76,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 21 - ((20 * winheight(0) + 29) / 58)
+let s:l = 54 - ((53 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-21
-normal! 05|
+54
+normal! 03|
 wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
@@ -108,12 +108,12 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 28 - ((27 * winheight(0) + 29) / 58)
+let s:l = 29 - ((28 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-28
-normal! 030|
+29
+normal! 0
 wincmd w
 argglobal
 edit prompt.c
@@ -176,11 +176,11 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 84 - ((56 * winheight(0) + 29) / 58)
+let s:l = 77 - ((57 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-84
+77
 normal! 0
 wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
@@ -226,14 +226,13 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 26 - ((25 * winheight(0) + 29) / 58)
+let s:l = 33 - ((32 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-26
-normal! 023|
+33
+normal! 03|
 wincmd w
-2wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
 tabedit ustring.h
@@ -386,7 +385,7 @@ normal! 0
 wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
-tabnext 4
+tabnext 7
 if exists('s:wipebuf') && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
 endif

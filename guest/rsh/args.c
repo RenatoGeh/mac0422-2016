@@ -34,6 +34,23 @@ args_t *create_args(string_t *cmd) {
   return args;
 }
 
+args_t *args_add(args_t *a, string_t *s) {
+  int i, old;
+  string_t **vals;
+
+  old = a->c++;
+  vals = (string_t**) malloc(a->c * sizeof(string_t*));
+
+  for (i = 0; i < old; ++i)
+    vals[i] = a->s[i];
+  vals[old] = s;
+
+  free(a->s);
+  a->s = vals;
+
+  return a;
+}
+
 void free_args(args_t *a) {
   free(a->s);
   free(a);

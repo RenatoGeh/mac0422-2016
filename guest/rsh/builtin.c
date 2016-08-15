@@ -5,15 +5,56 @@
 
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "utils.h"
 #include "args.h"
 #include "ustring.h"
+#include "proc.h"
 
-#define SIZE_LIST_CMDS 6
+#define SIZE_LIST_CMDS 10
 const char *_list_cmds[] = {
   "cd", "ls", "pwd", "exit", "true", "false",
+  "protegepracaramba", "liberageral", "rodeveja", "rode",
 };
+
+static int builtin_protegepracaramba(args_t *args) {
+  if (args->c < 2)
+    puts("Usage: protegepracaramba filename\n  Sets permissions to 000.");
+
+  if (chmod(args->s[0]->str, 0000) < 0) {
+    PRINT_ERR();
+    return 1;
+  }
+
+  return 0;
+}
+
+static int builtin_liberageral(args_t *args) {
+  if (args->c < 2)
+    puts("Usage: liberageral filename\n  Sets permissions to 777.");
+
+  if (chmod(args->s[0]->str, 0777) < 0) {
+    PRINT_ERR();
+    return 1;
+  }
+
+  return 0;
+}
+
+static int builtin_rodeveja(args_t *args) {
+  int res;
+  res = proc_exec(args);
+  printf("=> programa '%s' retornou com codigo %d.\n", args->s[0]->str, res);
+  return res;
+}
+
+static int builtin_rode(args_t *args) {
+  args_add(args, copy_string("&", 1));
+  return proc_exec(args);
+}
 
 static int builtin_true(args_t *args) { return 0; }
 static int builtin_false(args_t *args) { return 1; }
@@ -74,6 +115,7 @@ int builtin_contains(args_t *args) {
 
 int (*_list_funcs[SIZE_LIST_CMDS])(args_t *args) = {
   builtin_cd, builtin_ls, builtin_pwd, builtin_exit, builtin_true, builtin_false,
+  builtin_protegepracaramba, builtin_liberageral, builtin_rodeveja, builtin_rode,
 };
 
 int builtin_exec(args_t *args) {
