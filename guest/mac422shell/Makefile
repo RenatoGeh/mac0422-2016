@@ -8,7 +8,7 @@ ifeq ($(DEBUG), true)
 	CFLAGS += -g
 endif
 
-rsh: main.o $(DEPS)
+mac422shell: main.o $(DEPS)
 	gcc $^ -o $@ $(LIBS)
 
 main.o: main.c
@@ -34,4 +34,4 @@ utils.o: utils.c utils.h
 
 .PHONY: clean
 clean:
-	rm *.out *.gch *.o rsh
+	rm *.out *.gch *.o mac422shell
