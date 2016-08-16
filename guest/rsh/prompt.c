@@ -67,7 +67,7 @@ int prompt_readline(prompt_t *p) {
   if (len < 0)
     return _lres = 0;
   line[len] = '\0';
-  cmd = copy_string(line, len);
+  cmd = copy_string(line, len+1);
   args = create_args(cmd);
 
   res = builtin_exec(args);

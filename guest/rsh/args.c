@@ -1,6 +1,7 @@
 #include "args.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "utils.h"
@@ -47,6 +48,70 @@ args_t *args_add(args_t *a, string_t *s) {
 
   free(a->s);
   a->s = vals;
+
+  return a;
+}
+
+args_t *args_pop(args_t *a) {
+  string_t **new_s;
+  int i, n;
+
+  n = a->c - 1;
+  new_s = (string_t**) malloc(n * sizeof(string_t*));
+
+  for (i = 1; i < a->c; ++i)
+    new_s[i-1] = a->s[i];
+  free_string(a->s[0]);
+  free(a->s);
+  a->s = new_s;
+  --a->c;
+
+  return a;
+}
+
+args_t *args_pop_back(args_t *a) {
+  string_t **new_s;
+  int i;
+
+  a->c--;
+  new_s = (string_t**) malloc(a->c * sizeof(string_t*));
+
+  for (i = 0; i < a->c; ++i)
+    new_s[i] = a->s[i];
+  free_string(a->s[a->c]);
+  free(a->s);
+  a->s = new_s;
+
+  return a;
+}
+
+args_t *args_push(args_t *a, string_t *s) {
+  string_t **new_s;
+  int i;
+
+  ++a->c;
+  new_s = (string_t**) malloc(a->c * sizeof(string_t*));
+
+  for (i = 1; i < a->c; ++i)
+    new_s[i] = a->s[i-1];
+  new_s[0] = s;
+  free(a->s);
+  a->s = new_s;
+
+  return a;
+}
+
+args_t *args_push_back(args_t *a, string_t *s) {
+  string_t **new_s;
+  int i;
+
+  new_s = (string_t**) malloc((a->c+1) * sizeof(string_t*));
+
+  for (i = 0; i < a->c; ++i)
+    new_s[i] = a->s[i];
+  new_s[a->c++] = s;
+  free(a->s);
+  a->s = new_s;
 
   return a;
 }

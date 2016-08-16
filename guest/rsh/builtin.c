@@ -24,7 +24,7 @@ static int builtin_protegepracaramba(args_t *args) {
   if (args->c < 2)
     puts("Usage: protegepracaramba filename\n  Sets permissions to 000.");
 
-  if (chmod(args->s[0]->str, 0000) < 0) {
+  if (chmod(args->s[1]->str, 0000) < 0) {
     PRINT_ERR();
     return 1;
   }
@@ -36,7 +36,7 @@ static int builtin_liberageral(args_t *args) {
   if (args->c < 2)
     puts("Usage: liberageral filename\n  Sets permissions to 777.");
 
-  if (chmod(args->s[0]->str, 0777) < 0) {
+  if (chmod(args->s[1]->str, 0777) < 0) {
     PRINT_ERR();
     return 1;
   }
@@ -46,13 +46,23 @@ static int builtin_liberageral(args_t *args) {
 
 static int builtin_rodeveja(args_t *args) {
   int res;
+
+  if (args->c < 2)
+    puts("Usage: rodeveja cmd [args]\n  Runs command cmd with arguments args and outputs its "
+        "exit status.");
+
+  args_pop(args);
   res = proc_exec(args);
   printf("=> programa '%s' retornou com codigo %d.\n", args->s[0]->str, res);
   return res;
 }
 
 static int builtin_rode(args_t *args) {
-  args_add(args, copy_string("&", 1));
+  if (args->c < 2)
+    puts("Usage: rode cmd [args]\n  Runs command cmd with arguments args.");
+
+  args_pop(args);
+  args_add(args, copy_string("&", 2));
   return proc_exec(args);
 }
 

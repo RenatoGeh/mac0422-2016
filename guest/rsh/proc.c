@@ -16,15 +16,17 @@
 #define MAX_ARGS 50
 
 int proc_exec(args_t *args) {
-  int i;
+  int i, bg, n;
   pid_t chid;
   char **argv;
   char *const env[] = {NULL};
 
   argv = (char**) malloc((args->c+1) * sizeof(char*));
-  for (i = 0; i < args->c; ++i)
+  bg = strcmp(args->s[args->c-1]->str, "&") == 0;
+  n = bg ? args->c-1 : args->c;
+  for (i = 0; i < n; ++i)
     argv[i] = args->s[i]->str;
-  argv[args->c] = NULL;
+  argv[n] = NULL;
 
   if ((chid = fork()) < 0) {
     PRINT_ERR();
@@ -43,7 +45,7 @@ int proc_exec(args_t *args) {
   }
 
   /* Parent process. */
-  if (strcmp(args->s[args->c-1]->str, "&"))
+  if (!bg)
     waitpid(chid, NULL, 0);
 
   free(argv);
