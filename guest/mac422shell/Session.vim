@@ -2,23 +2,23 @@ let SessionLoad = 1
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 let v:this_session=expand("<sfile>:p")
 silent only
-cd ~/Documents/EPs/mac0422-2016/guest/rsh
+cd ~/Documents/EPs/mac0422-2016/guest/mac422shell
 if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +1 args.c
+badd +31 args.c
 badd +18 args.h
 badd +1 builtin.c
-badd +11 builtin.h
+badd +8 builtin.h
 badd +23 Makefile
 badd +8 proc.h
 badd +1 prompt.c
-badd +29 prompt.h
+badd +26 prompt.h
 badd +1 ustring.c
-badd +23 ustring.h
+badd +21 ustring.h
 badd +32 utils.h
-badd +1 proc.c
+badd +47 proc.c
 badd +1 utils.c
 badd +10 main.c
 badd +487 ~/.janus/vim-airline/doc/airline.txt
@@ -76,13 +76,14 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 60 - ((57 * winheight(0) + 29) / 58)
+let s:l = 31 - ((28 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-60
-normal! 03|
+31
+normal! 037|
 wincmd w
+2wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
 tabedit prompt.h
@@ -226,14 +227,13 @@ setlocal fml=1
 setlocal fdn=20
 setlocal fen
 silent! normal! zE
-let s:l = 47 - ((46 * winheight(0) + 29) / 58)
+let s:l = 46 - ((45 * winheight(0) + 29) / 58)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-47
-normal! 03|
+46
+normal! 0
 wincmd w
-2wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
 tabedit ustring.h
@@ -386,7 +386,7 @@ normal! 0
 wincmd w
 exe 'vert 1resize ' . ((&columns * 106 + 106) / 212)
 exe 'vert 2resize ' . ((&columns * 105 + 106) / 212)
-tabnext 4
+tabnext 1
 if exists('s:wipebuf') && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
   silent exe 'bwipe ' . s:wipebuf
 endif

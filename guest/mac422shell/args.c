@@ -28,7 +28,7 @@ args_t *create_args(string_t *cmd) {
   ptr = strtok(cmd->str, " ");
   for (i = l = 0; ptr != NULL; ++i) {
     for (j = 0; ptr[j] != '\0'; ++j);
-    args->s[i] = copy_string(ptr, j);
+    args->s[i] = copy_string(ptr, j+1);
     ptr = strtok(NULL, " ");
   }
 
