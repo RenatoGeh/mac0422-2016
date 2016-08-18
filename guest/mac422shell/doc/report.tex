@@ -1,0 +1,84 @@
+\documentclass{amsart}
+
+\usepackage[brazilian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{hyperref}
+\usepackage[singlelinecheck=false]{caption}
+\usepackage{enumitem}
+\usepackage[justification=centering]{caption}
+\usepackage{indentfirst}
+\usepackage{listings}
+
+\makeatletter
+\def\subsection{\@startsection{subsection}{3}%
+  \z@{.5\linespacing\@plus.7\linespacing}{.1\linespacing}%
+  {\normalfont\itshape}}
+\makeatother
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newcommand\defeq{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily def}}}{=}}}
+
+\captionsetup[table]{labelsep=space}
+
+\theoremstyle{plain}
+
+\newtheorem*{definition}{Definição}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{exercise}{Exercise}
+
+\newcommand{\set}[1]{\mathcal{#1}}
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\implies}{\Rightarrow}
+
+\newcommand{\code}[1]{\lstinline[mathescape=true]{#1}}
+\newcommand{\mcode}[1]{\lstinline[mathescape]!#1!}
+
+%\lstset{frameround=fttt,
+	%language=C,
+	%numbers=left,
+	%breaklines=true,
+	%keywordstyle=\bfseries,
+	%basicstyle=\ttfamily,
+	%numberstyle=\color{black}
+%}
+
+\lstMakeShortInline[columns=fixed]|
+
+\setlength{\parskip}{1em}
+
+\title[]{\rule{10.5cm}{0.8pt}\\Exercício-Programa 1: mac422shell\\\vspace{2mm}\footnotesize
+  Sistemas Operacionais -- MAC0422\\\rule{10cm}{0.8pt}}
+\author[]{Renato Lui Geh\\NUSP\@: 8536030}
+
+\begin{document}
+\date{\today}
+
+\begin{abstract}
+  Relatório do Exercício Programa 1 de Sistemas Operacionais (MAC0422).
+  \vspace*{-2.5em}
+\end{abstract}
+
+\maketitle
+
+\section{Introdução}
+
+O EP foi feito em um Minix 3.1.2a simulado pela VM VirtualBox. Os arquivos fonte estão localizados
+em \code{/usr/local/src/mac422shell} e o binário compilado em \code{/usr/local/bin/} com o nome de
+\code{mac422shell}.
+
+Ao rodar o shell \code{mac422shell} o prompt do shell terá o seguinte aspecto:
+
+\begin{lstlisting}
+  [r] pwd $>
+\end{lstlisting}
+
+Onde \code{r} é
+
+\end{document}

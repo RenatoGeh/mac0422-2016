@@ -16,7 +16,7 @@
 #define MAX_ARGS 50
 
 int proc_exec(args_t *args) {
-  int i, bg, n;
+  int i, bg, n, status;
   pid_t chid;
   char **argv;
   char *const env[] = {NULL};
@@ -45,8 +45,16 @@ int proc_exec(args_t *args) {
   }
 
   /* Parent process. */
-  if (!bg)
-    waitpid(chid, NULL, 0);
+  if (!bg) {
+    if (waitpid(chid, NULL, 0) < 0) {
+      PRINT_ERR();
+      free(argv);
+      return errno;
+    } else if (WIFEXITED(status)) {
+      free(argv);
+      return WEXITSTATUS(status);
+    }
+  }
 
   free(argv);
 
