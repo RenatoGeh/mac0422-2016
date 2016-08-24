@@ -44,17 +44,17 @@ int prompt_readline(prompt_t *p) {
   char *errline;
 
   errline = fgets(line, BUFFER_SIZE, stdin);
-  if (line[0] == '\n' || line[0] == '\0')
-    return _lres = 0;
   if (errline == NULL) {
     if (feof(stdin)) {
       putchar('\n');
-      return _lres = 0;
+      exit(0);
     } else {
       puts("Line too long for buffer!");
       return _lres = 1;
     }
   }
+  if (line[0] == '\n' || line[0] == '\0')
+    return _lres = 0;
 
   len = strlen(line) - 1;
 

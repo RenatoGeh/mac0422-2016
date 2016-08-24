@@ -8,6 +8,5 @@ all:
 
 .PHONY: clean
 clean:
-	rm *.aux *.bbl *.bcf *.blg *.log *.out *.run.xml *.toc;
-	rm -rf _minted-report
+	rm *.aux *.bbl *.bcf *.blg *.log *.out *.run.xml *.toc; rm -rf _minted-report *.pygtex
 

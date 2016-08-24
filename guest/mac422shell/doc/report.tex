@@ -12,6 +12,7 @@
 \usepackage[justification=centering]{caption}
 \usepackage{indentfirst}
 \usepackage{listings}
+\usepackage{minted}
 
 \makeatletter
 \def\subsection{\@startsection{subsection}{3}%
@@ -36,20 +37,21 @@
 \newcommand{\set}[1]{\mathcal{#1}}
 \newcommand{\pr}{\mathbb{P}}
 \renewcommand{\implies}{\Rightarrow}
+\newcommand{\prompt}{$\$$}
 
 \newcommand{\code}[1]{\lstinline[mathescape=true]{#1}}
 \newcommand{\mcode}[1]{\lstinline[mathescape]!#1!}
 
-%\lstset{frameround=fttt,
-	%language=C,
-	%numbers=left,
-	%breaklines=true,
-	%keywordstyle=\bfseries,
-	%basicstyle=\ttfamily,
-	%numberstyle=\color{black}
-%}
+\lstset{%
+  language=C,
+  numbers=left,
+  breaklines=true,
+  keywordstyle=\bfseries,
+  basicstyle=\ttfamily
+}
 
-\lstMakeShortInline[columns=fixed]|
+\lstdefinestyle{numbers}{numbers=left, stepnumber=1, numberstyle=\tiny, numbersep=10pt}
+\lstdefinestyle{nonumbers}{numbers=none}
 
 \setlength{\parskip}{1em}
 
@@ -59,12 +61,6 @@
 
 \begin{document}
 \date{\today}
-
-\begin{abstract}
-  Relatório do Exercício Programa 1 de Sistemas Operacionais (MAC0422).
-  \vspace*{-2.5em}
-\end{abstract}
-
 \maketitle
 
 \section{Introdução}
@@ -75,10 +71,317 @@ em \code{/usr/local/src/mac422shell} e o binário compilado em \code{/usr/local/
 
 Ao rodar o shell \code{mac422shell} o prompt do shell terá o seguinte aspecto:
 
-\begin{lstlisting}
-  [r] pwd $>
+\begin{lstlisting}[mathescape=true,style=nonumbers]
+  [r] pwd $\$$>
 \end{lstlisting}
 
-Onde \code{r} é
+Onde \code{r} é o valor de saída do último comando executado e \code{pwd} é o caminho absoluto em
+que \code{mac422shell} foi executado.
+
+Existem nove comandos pré-existentes na shell:
+
+\begin{itemize}
+  \item ls
+    \begin{itemize}
+      \item Lista os conteúdos do diretório \code{pwd}. Similar (mas não igual) a \code{rodeveja
+        \\bin\\ls}.
+      \item Uso: \mcode{ls}
+    \end{itemize}
+  \item pwd
+    \begin{itemize}
+      \item Retorna o diretório atual. Similar (mas não igual) a \code{rodeveja \\bin\\pwd}.
+      \item Uso: \mcode{pwd}
+    \end{itemize}
+  \item exit
+    \begin{itemize}
+      \item Sai do shell.
+      \item Uso: \mcode{exit}
+    \end{itemize}
+  \item true
+    \begin{itemize}
+      \item Retorna um valor de saída 0.
+      \item Uso: \mcode{true}
+    \end{itemize}
+  \item false
+    \begin{itemize}
+      \item Retorna um valor de saída 1.
+      \item Uso: \mcode{false}
+    \end{itemize}
+  \item protegepracaramba
+    \begin{itemize}
+      \item Dá ao arquivo dado como parâmetro proteção \code{000}.
+      \item Uso: \mcode{protegepracaramba filename}
+    \end{itemize}
+  \item liberageral
+    \begin{itemize}
+      \item Dá ao arquivo dado como parâmetro proteção \code{777}.
+      \item Uso: \mcode{liberageral filename}
+    \end{itemize}
+  \item rodeveja
+    \begin{itemize}
+      \item Roda um executável e em seguida retorna o valor de saída na saída padrão.
+      \item Uso: \mcode{rodeveja command [arguments]}
+    \end{itemize}
+  \item rode
+    \begin{itemize}
+      \item Roda um executável em background e imprime a saída na saída padrão.
+      \item Uso: \mcode{rode command [arguments]}
+    \end{itemize}
+\end{itemize}
+
+Além destes comandos, podemos também rodar um comando externo dando o nome do executável. Por
+exemplo:
+
+\begin{lstlisting}[mathescape=true,style=nonumbers]
+  $\$$ /bin/ls -la
+\end{lstlisting}
+
+Rodar o comando externo tem um comportamento semelhante a usar \code{rodeveja}, com a diferença de
+que rodar apenas o comando não irá imprimir o valor de retorno do comando na saída padrão%
+\footnote{Note que usar \code{rodeveja} ou rodar o comando diretamente irá, em ambos os casos,
+modificar o valor de \code{r} no prompt.}.
+
+\section{Organização}
+
+Iremos agora enumerar os arquivos fontes presentes em \code{/usr/local/src} e explicar como foi
+organizado o código.
+
+O código foi separado nos seguintes arquivos:
+
+\begin{itemize}
+  \item \code{args.\{c,h\}}
+  \item \code{builtin.\{c,h\}}
+  \item \code{proc.\{c,h\}}
+  \item \code{prompt.\{c,h\}}
+  \item \code{ustring.\{c,h\}}
+  \item \code{utils.\{c,h\}}
+  \item \code{main.c}
+\end{itemize}
+
+O código em \code{ustring} refere-se ao tipo \code{string_t}, uma estrutura para facilitar a
+passagem de argumentos. Guarda uma cadeia de caracteres e um inteiro indicando o tamanho. Em
+\code{utils} encontram-se algumas funções de uso geral, como macros para imprimir mensagens de
+erro, achar o mínimo ou máximo entre dois inteiros ou retornar o diretório atual com a chamada de
+sistema \code{getcwd}. Os arquivos \code{args} referem-se a estrutura que guarda argumentos
+dinamicamente. As funções presentes nestes arquivos manipulam a estrutura \code{args_t}, como
+veremos mais adiante.
+
+Os arquivos fontes \code{builtin}, \code{proc} e \code{prompt} contêm o código responsável pela
+shell. O primeiro contém as funções que executam os comandos pré-existentes como enumerados na
+seção anterior. O segundo trata da criação de novos processos, seja por meio de \code{rodeveja},
+\code{rode} ou executando um comando diretamente. O último cuida da entrada e da atualização do
+prompt.
+
+O código em \code{main.c} apenas roda \code{prompt_readline} e \code{prompt_print} até que o
+usuário peça que a shell seja terminada.
+
+\section{Argumentos}
+
+Iremos apresentar nesta seção a estrutura de dados \code{args_t} que contem uma lista de argumentos
+que passaremos a cada função.
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  typedef struct {
+    /* List of string to be passed as arguments. */
+    string_t **s;
+    /* Argument count. */
+    int c;
+  } args_t;
+\end{minted}
+
+Cada lista de argumentos \code{args_t} contém um número \code{(args_t).c} de argumentos. Para
+facilitar o uso de \code{args_t}, as seguintes funções de manipulação de \code{args_t} foram
+criadas:
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  /* Pops the first string_t from args_t *a. */
+  args_t *args_pop(args_t *a);
+
+  /* Pops the back of the list of arguments. */
+  args_t *args_pop_back(args_t *a);
+
+  /* Pushes argument s to the front of list of arguments a. */
+  args_t *args_push(args_t *a, string_t *s);
+
+  /* Pushes argument s to the back of list of arguments a. */
+  args_t *args_push_back(args_t *a, string_t *s);
+\end{minted}
+
+Estas funções agem como se \code{args_t} fosse uma fila dupla. Iremos usar estas funções para
+mandarmos a shell rodar um comando em \textit{background} ou \textit{foreground}.
+
+\section{Comandos}
+
+Nesta seção iremos descrever cada comando pedido no enunciado do EP, explicitando quais foram as
+chamadas de sistema utilizados e como foram feitos.
+
+O código para estes comandos estão em \code{builtin.c}. Todas estas funções contêm o prefixo
+\code{builtin_} antes do nome do comando e seguem o seguinte protótipo:
+
+\begin{minted}[gobble=2]{c}
+  static int builtin_nomecomando(args_t *args);
+\end{minted}
+
+\subsection{\code{protegepracaramba}}
+
+Este comando toma como argumento um arquivo \code{filename}. Em seguida,\\ \code{protegepracaramba}
+chama a chamada de sistema \code{chmod} com parâmetro \code{000}. Se a função de sistema teve
+sucesso, o arquivo \code{filename} terá agora permissão \code{000}. Senão, o comando
+\code{protegepracaramba} retornará o valor \code{1} e irá imprimir, na saída padrão, uma mensagem
+de erro dada pela chamada \code{chmod}. Se não houver erros, o comando retornará \code{0}.
+
+\begin{minted}[gobble=2,frame=lines,linenos=true]{c}
+  static int builtin_protegepracaramba(args_t *args) {
+    if (args->c < 2)
+      puts("Usage: protegepracaramba filename\n  "
+           "Sets permissions to 000.");
+
+    if (chmod(args->s[1]->str, 0000) < 0) {
+      PRINT_ERR();
+      return 1;
+    }
+    return 0;
+  }
+\end{minted}
+
+\subsection{\code{liberageral}}
+
+Assim como \code{protegepracaramba}, o comando \code{liberageral} toma um arquivo \code{filename} e
+usa \code{chmod} para dar permissão \code{777} para \code{filename}. Se houver algum erro, o
+comando irá imprimir a mensagem e número de erro na saída padrão e retornar \code{1}. Senão, apenas
+retorna \code{0}.
+
+\begin{minted}[gobble=2,frame=lines,linenos=true]{c}
+  static int builtin_liberageral(args_t *args) {
+    if (args->c < 2)
+      puts("Usage: liberageral filename\n  "
+           "Sets permissions to 777.");
+
+    if (chmod(args->s[1]->str, 0777) < 0) {
+      PRINT_ERR();
+      return 1;
+    }
+    return 0;
+  }
+\end{minted}
+
+\subsection{\code{rodeveja}}
+
+O comando \code{rodeveja} aceita como argumentos um comando \code{command} e argumentos para
+\code{command}.
+
+\begin{lstlisting}[mathescape=true,style=nonumbers]
+  $\$$ rodeveja command [arguments]
+\end{lstlisting}
+
+Onde \mcode{[$\cdot$]} indica uma lista de argumentos de tamanho arbitrário (e possivelmente zero).
+Esta função irá rodar o comando dado como parâmetro e imprimir o resultado.
+
+\begin{minted}[gobble=2,frame=lines,linenos=true]{c}
+  static int builtin_rodeveja(args_t *args) {
+    int res;
+
+    if (args->c < 2)
+      puts("Usage: rodeveja cmd [args]\n  "
+           "Runs command cmd with arguments args "
+           "and outputs its exit status.");
+
+    args_pop(args);
+    res = proc_exec(args);
+    printf("=> programa '%s' retornou com codigo "
+           "%d.\n", args->s[0]->str, res);
+    return res;
+  }
+\end{minted}
+
+Assim que passarmos \code{args_t *args}, teremos uma lista de argumentos cuja cabeça da lista é a
+string \code{rodeveja}. Para passarmos o comando certo dado por \code{command [arguments]}, temos
+de tirar o primeiro elemento da fila dupla \code{args}. Para isso usaremos \code{args_pop}.
+
+Após eliminarmos a cabeça da lista, passamos o restante dos argumentos para a função
+\code{proc_exec}, que veremos na próxima seção. Note que esta função não roda nenhuma chamada de
+sistema explicitamente. Cabe a \code{proc_exec} fazer tais chamadas.
+
+\subsection{\code{rode}}
+
+O comando \code{rode} é semelhante a \code{rodeveja}, contendo apenas duas diferenças. Como o
+executável dado como argumento será rodado em \textit{background}, iremos dizer a \code{proc_exec}
+para não esperar o processo filho acabar para retornar o valor. Além disso, não escreveremos o
+resultado do comando na saída padrão como fizemos em \code{rodeveja}.
+\newpage
+\begin{minted}[gobble=2,frame=lines,linenos=true]{c}
+  static int builtin_rode(args_t *args) {
+    if (args->c < 2)
+      puts("Usage: rode cmd [args]\n  "
+           "Runs command cmd with arguments args.");
+
+    args_pop(args);
+    args_add(args, copy_string("&", 2));
+    return proc_exec(args);
+  }
+\end{minted}
+
+Note que, além de chamarmos \code{args_pop(args)} como fizemos em \code{rodeveja}, também
+adicionamos um novo argumento no final da fila \code{args}: a string \code{\"\&\"}. Essa string
+diz a \code{proc_exec} para não esperar pelo processo filho.
+
+\section{Rodando comandos externos}
+
+Nesta seção analisaremos o módulo \code{proc}. Este módulo contém apenas uma função:
+
+\begin{minted}[gobble=2]{c}
+  int proc_exec(args_t *args);
+\end{minted}
+
+Seja uma lista de argumentos $A$, e $|A|=n$. Então a função \code{proc_exec} segue o seguinte
+algoritmo:
+
+\begin{enumerate}[label*=\arabic*.]
+  \item Toma a string $A[0]$ como o comando a ser rodado.
+  \item Toma a lista de strings $A[1..n-2]$ como argumentos para $A[0]$.
+  \item Cria um clone do processo com \code{fork}.
+  \item Se for processo filho:
+  \begin{enumerate}[label*=\arabic*.]
+    \item Roda $A[0]$ dados $A[1..n-2]$ com \code{execve}.
+    \item Se deu erro, imprime erro.
+    \item Termina o processo.
+  \end{enumerate}
+  \item Senão, é processo pai:
+  \begin{enumerate}[label*=\arabic*.]
+    \item Se $A[n-1] = "\&"$, estamos rodando em \textit{background}:
+    \begin{enumerate}[label*=\arabic*.]
+      \item Retorna o valor fixo de 0.
+    \end{enumerate}
+    \item Senão, temos de esperar pelo filho:
+      \begin{enumerate}[label*=\arabic*.]
+        \item Se houve erro, imprime erro e retorna o número do erro.
+        \item Senão, retorna o valor de \mcode{execve($A[0..n-1]$)}.
+      \end{enumerate}
+  \end{enumerate}
+\end{enumerate}
+
+Passos 4 e 5 estarão rodando concorrentemente. A princípio poderíamos achar que isso pode trazer
+algum problema, mas ao analisarmos é fácil ver que os dois eventos são independentes. Caso o filho
+acabe antes, então o pai saber se deve esperar ou não não importará. Se o filho acabar depois, o
+pai então deverá esperar pelo filho, e portanto ficará ``preso'' em 5.2.
+
+Usamos nesta função duas chamadas de sistema: \code{fork} e \code{execve}. A primeira cria um clone
+do nosso processo no passo 3. Se o resultado desta chamada for igual a zero, então estamos rodando
+no processo filho e portanto entraremos no bloco do passo 4. Caso contrário estaremos no processo
+pai e portanto entraremos no bloco do passo 5.
+
+\section{Compilando}
+
+Para compilar, basta rodar o Makefile em \code{/usr/local/src/mac422shell}. O Makefile usa o
+\code{gcc}, que no Minix que usei coloquei em \code{/bin/}. O binário resultante é um executável
+\code{mac422shell}, que deve ser equivalente ao já presente em \code{/usr/local/bin/}.
+
+A shell \code{mac422shell} foi compilada com as seguintes flags:
+
+\begin{lstlisting}[style=nonumbers]
+  -Wall -ansi -pedantic
+\end{lstlisting}
+
+Não imprimindo nenhum erro durante a compilação.
 
 \end{document}

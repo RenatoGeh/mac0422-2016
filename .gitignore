@@ -1,3 +1,8 @@
+# LaTeX out files.
+*.log
+*.out
+*.aux
+
 # Object files
 *.o
 *.ko
