@@ -352,7 +352,7 @@ algoritmo:
     \begin{enumerate}[label*=\arabic*.]
       \item Retorna o valor fixo de 0.
     \end{enumerate}
-    \item Senão, temos de esperar pelo filho:
+    \item Senão, temos de esperar pelo filho com \code{wait}:
       \begin{enumerate}[label*=\arabic*.]
         \item Se houve erro, imprime erro e retorna o número do erro.
         \item Senão, retorna o valor de \mcode{execve($A[0..n-1]$)}.
@@ -362,13 +362,19 @@ algoritmo:
 
 Passos 4 e 5 estarão rodando concorrentemente. A princípio poderíamos achar que isso pode trazer
 algum problema, mas ao analisarmos é fácil ver que os dois eventos são independentes. Caso o filho
-acabe antes, então o pai saber se deve esperar ou não não importará. Se o filho acabar depois, o
-pai então deverá esperar pelo filho, e portanto ficará ``preso'' em 5.2.
+acabe antes e o pai deve esperar, então o pai não precisa mais esperar pelo filho. Se o filho
+acabar antes e o pai não precisa esperar, então não há problemas. Se o filho acabar depois e o pai
+deve esperar, então o pai irá esperar pelo filho normalmente e ficará ``preso'' em 5.2. Se o filho
+acabar depois e o pai não precisa esperar, então a função irá retornar o valor fixo de 0 e a saída
+do filho aparecerá, possivelmente, depois da impressão do prompt.
 
-Usamos nesta função duas chamadas de sistema: \code{fork} e \code{execve}. A primeira cria um clone
-do nosso processo no passo 3. Se o resultado desta chamada for igual a zero, então estamos rodando
-no processo filho e portanto entraremos no bloco do passo 4. Caso contrário estaremos no processo
-pai e portanto entraremos no bloco do passo 5.
+Usamos nesta função três chamadas de sistema: \code{fork}, \code{waitpid} e \code{execve}. A
+primeira cria um clone do nosso processo no passo 3. Se o resultado desta chamada for igual a zero,
+então estamos rodando no processo filho e portanto entraremos no bloco do passo 4. Caso contrário
+estaremos no processo pai e portanto entraremos no bloco do passo 5. A segunda espera pelo processo
+filho de \code{PID} dado, como visto no passo 5.2. A última troca a imagem do processo atual por o
+de um comando especificado pelos argumentos de \code{execve}, o que no caso seria $A[1..n-2]$ se
+$A[n-1]="\&"$ ou $A[1..n-1]$ caso contrário (passo 5.2.2).
 
 \section{Compilando}
 
