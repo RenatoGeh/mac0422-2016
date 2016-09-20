@@ -1,0 +1,76 @@
+\documentclass{amsart}
+
+\usepackage[brazilian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{hyperref}
+\usepackage[singlelinecheck=false]{caption}
+\usepackage{enumitem}
+\usepackage[justification=centering]{caption}
+\usepackage{indentfirst}
+\usepackage{listings}
+\usepackage{minted}
+
+\makeatletter
+\def\subsection{\@startsection{subsection}{3}%
+  \z@{.5\linespacing\@plus.7\linespacing}{.1\linespacing}%
+  {\normalfont\itshape}}
+\makeatother
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\newcommand\defeq{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily def}}}{=}}}
+
+\captionsetup[table]{labelsep=space}
+
+\theoremstyle{plain}
+
+\newtheorem*{definition}{Definição}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{exercise}{Exercise}
+
+\newcommand{\set}[1]{\mathcal{#1}}
+\newcommand{\pr}{\mathbb{P}}
+\renewcommand{\implies}{\Rightarrow}
+\newcommand{\prompt}{$\$$}
+
+\newcommand{\code}[1]{\lstinline[mathescape=true]{#1}}
+\newcommand{\mcode}[1]{\lstinline[mathescape]!#1!}
+
+\lstset{%
+  language=C,
+  numbers=left,
+  breaklines=true,
+  keywordstyle=\bfseries,
+  basicstyle=\ttfamily
+}
+
+\lstdefinestyle{numbers}{numbers=left, stepnumber=1, numberstyle=\tiny, numbersep=10pt}
+\lstdefinestyle{nonumbers}{numbers=none}
+
+\setlength{\parskip}{1em}
+
+\title[]{\rule{10.5cm}{0.8pt}\\Exercício-Programa 2:\\
+Escalonamento de Processos
+\\\vspace{2mm}\footnotesize
+  Sistemas Operacionais -- MAC0422\\\rule{10cm}{0.8pt}}
+\author[]{Renato Lui Geh\\NUSP\@: 8536030\\
+          Guilherme Freire\\NUSP\@: }
+
+\begin{document}
+\date{\today}
+\maketitle
+
+\section{Introdução}
+
+O EP foi feito em um Minix 3.1.2a simulado pela VM VirtualBox. Os arquivos fonte estão localizados
+em \code{/usr/local/src/}.
+
+
+
+\end{document}
