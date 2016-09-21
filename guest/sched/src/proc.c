@@ -645,23 +645,32 @@ int *queue;   /* return: queue to use */
 int *front;   /* return: front or back */
 {
   register struct proc *batch_it;
-  int max, time_left, diff;
+  int lmin, diff;
  
   batch_it = rdy_head[BATCH_Q];
-  max = -1;
-  time_left = (rp->p_ticks_left <= 0);
-  if (!time_left) {
-    for (; batch_it != rdy_head[BATCH_Q]; batch_it = batch_it->p_nextready) {
-      if (batch_it->p_user_time > max)
-        max = batch_it->p_user_time;
+  diff = 0;
+  lmin = -1;
+  if (batch_it->p_time_left <= 0) {
+    /* Find `last` proc wrt user time */
+    for (; batch_it != NIL_PROC; batch_it = batch_it->p_nextready) {
+      if (batch_it == rp) continue;
+      if (lmin < 0)
+        lmin = batch_it->p_user_time;
+      else if (batch_it->p_user_time < lmin)
+        lmin = batch_it->p_user_time;
     }
-    if ((diff = max - rp->p_user_time) > 0)
-      rp->p_ticks_left = diff;
+    /* Invariant: diff >= 0, since lmin is minimum */
+    diff = rp->p_user_time - lmin;
+    /* If diff == 0, rp is next to lmin => rp must go front */
+    if (diff <= 0)
+      rp->p_ticks_left = rp->p_quantum_time;
+    /* Else, rp is `in front` of lmin => rp must wait for last proc */
     else
-      rp->p_ticks_left = rp->p_quantum_size;
+      rp->p_ticks_left = 0;
   }
   *queue = BATCH_Q;
-  *front = time_left;
+  /* If there is still time left, keep it front. Else, depends on diff. */
+  *front = !diff; 
 }
 /* ########################################################## */
   
