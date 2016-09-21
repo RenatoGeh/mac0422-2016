@@ -17,7 +17,7 @@
 \makeatletter
 \def\subsection{\@startsection{subsection}{3}%
   \z@{.5\linespacing\@plus.7\linespacing}{.1\linespacing}%
-  {\normalfont\itshape}}
+  {\normalfont}}
 \makeatother
 
 \DeclareMathOperator*{\argmin}{arg\,min}
@@ -58,7 +58,7 @@
 \title[]{\rule{10.5cm}{0.8pt}\\Exercício-Programa 2:\\
 Escalonamento de Processos
 \\\vspace{2mm}\footnotesize
-  Sistemas Operacionais -- MAC0422\\\rule{10cm}{0.8pt}}
+  Sistemas Operacionais --- MAC0422\\\rule{10cm}{0.8pt}}
 \author[]{Renato Lui Geh\\NUSP\@: 8536030\\
           Guilherme Freire\\NUSP\@: }
 
@@ -71,6 +71,180 @@ Escalonamento de Processos
 O EP foi feito em um Minix 3.1.2a simulado pela VM VirtualBox. Os arquivos fonte estão localizados
 em \code{/usr/local/src/}.
 
+Os arquivos modificados foram:
 
+\begin{itemize}
+  \item \code{/usr/local/src/kernel/proc.c}
+  \item \code{/usr/local/src/kernel/proc.h}
+\end{itemize}
+
+Quando os blocos de código transcritos neste relatório não forem muito grandes, vamos indicar as
+modificações feitas. Um símbolo \code{-} no início da linha indica a linha original no Minix. Um
+símbolo \code{+} no início da linha indica a nova linha adaptada para o EP\@. Uma linha vazia com o
+símbolo \code{-} indica que no código original a linha não existia. Analogamente, \code{+} em uma
+linha vazia indica que deletamos a linha original.
+
+\section{Kernel}
+
+As modificações no kernel foram feitas nos arquivos:
+
+\begin{enumerate}
+  \item\label{proc_c} \code{/usr/local/src/kernel/proc.c}
+  \item\label{proc_h} \code{/usr/local/src/kernel/proc.h}
+\end{enumerate}
+
+No arquivo~\ref{proc_h}, adicionamos uma nova macro \code{BATCH_Q}:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-
++ #define BATCH_Q 15 /* batch queue, before IDLE and after user queues. */
+\end{lstlisting}
+
+Esta nova macro indica uma nova fila de prioridade, antes da fila \code{idle} (\code{IDLE_Q}) e
+depois da última fila de prioridade de usuário (\code{MIN_USER_Q}). Como adicionamos uma nova fila,
+precisamos incrementar em um a macro que indica o número total de filas:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+- #define NR_SCHED_QUEUES 16
++ #define NR_SCHED_QUEUES 17
+\end{lstlisting}
+
+Além disso, como estamos transladando a fila de \code{idle}, precisamos incrementa-la também.
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+- #define IDLE_Q 15
++ #define IDLE_Q 16
+\end{lstlisting}
+
+Estas modificações em \code{proc.h} concluem a tarefa 1 do EP\@. Agora discutiremos as mudanças
+feitas em \code{proc.c}, que coincidem justamente com a tarefa 3.
+
+Seguindo a convenção ANSI descrita em \code{/usr/lib/ansi.h} e seguida pelo Minix 3.1.2a, devemos
+primeiro declarar a nova função de escalonamento em batch:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-
++ FORWARD _PROTOTYPE (void sched_batch, (struct proc *rp, int *queue, int *front));
+\end{lstlisting}
+
+Vamos agora transcrever e analisar a nova função \code{sched_batch} que trata do escalonamento em
+batch.
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  /*=================================================================*
+   *        sched_batch          *
+   *=================================================================*/
+
+  PRIVATE void sched_batch(rp, queue, front)
+  register struct proc *rp;  /* process to be scheduled */
+  int *queue;   /* return: queue to use */
+  int *front;   /* return: front or back */
+  {
+    register struct proc *batch_it;
+    int lmin, diff;
+
+    batch_it = rdy_head[BATCH_Q];
+    diff = 0;
+    lmin = -1;
+    if (batch_it->p_time_left <= 0) {
+      /* Find `last' proc wrt user time */
+      for (; batch_it != NIL_PROC; batch_it = batch_it->p_nextready) {
+        if (batch_it == rp) continue;
+        if (lmin < 0)
+          lmin = batch_it->p_user_time;
+        else if (batch_it->p_user_time < lmin)
+          lmin = batch_it->p_user_time;
+      }
+      /* Invariant: diff >= 0, since lmin is minimum */
+      diff = rp->p_user_time - lmin;
+      /* If diff == 0, rp is next to lmin => rp must go front */
+      if (diff <= 0)
+        rp->p_ticks_left = rp->p_quantum_time;
+      /* Else, rp is `in front` of lmin => rp must wait for last proc */
+      else
+        rp->p_ticks_left = 0;
+    }
+    *queue = BATCH_Q;
+    /* If there is still time left, keep it front. Else, depends on diff. */
+    *front = !diff;
+  }
+\end{minted}
+
+A função \code{sched_batch}, assim como a função original \code{sched} do Minix, toma como
+argumentos uma \code{struct proc*} que representa o endereço do processo a ser escalonado, e dois
+endereços para inteiros, \code{queue} que sinaliza qual a fila de prioridade para se usar, e
+\code{front} que indica se o processo deve ir na frente da fila ou atrás.
+
+Vamos analisar a função. Antes de mais nada, declaramos as variáveis que iremos utilizar. A
+variável \code{register struct proc *batch_it} será, no \code{for} da linha 18, o endereço para
+processo de cada item da fila de prioridade indexado por \code{BATCH_Q}. O inteiro \code{lmin}
+é o menor tempo de usuário de todos os processos da fila. Já \code{diff} será usado para medir a
+diferença entre o menor tempo de usuário e o tempo de usuário do processo a ser escalonado.
+
+As linhas 18-24 apenas acham o menor tempo de execução da fila de processos em batch. Percorremos
+a fila e consideramos os tempos de execução de usuário desde que o processo visto é distinto
+daquele que estamos escalonando. Em seguida, na linha 26, atribuímos o valor da diferença entre o
+menor tempo ao tempo de execução de usuário do processo a ser escalonado. Note a invariância de que
+nesta linha \mcode{diff $\geq 0$}. Isso ocorre pois, como \code{lmin} é mínimo, então se
+considerarmos o oposto, então \code{rp->p_user_time < lmin}, o que é uma contradição.
+
+Note que na linha 14, inicializamos a variável \code{diff} como 0. Isso ocorre pois devemos
+considerar dois casos. No caso em que o processo ainda possue tempo de execução (ou seja, se a
+linha 16 retornar falso) devemos colocar o processo no começo da fila. Como diff é inicializado
+como 0, a linha 36 funciona como intencionado. Agora considere o caso em que o processo precisa ser
+re-escalonado (ou seja, se a linha 16 retornar verdadeiro). Neste caso, vamos ter dois subcasos:
+
+\begin{enumerate}[label*=\arabic*o.~subcaso]
+  \item~\\
+    \begin{enumerate}[label=1.\arabic*.]
+      \item Temos que \code{diff == 0} (linha 28).
+      \item Ou seja, \code{rp} está tão ``atrasado'' quanto o processo que rodou menos.
+      \item Isto indica que devemos rodar \code{rp} antes, já que ele está empatado com o último.
+      \item Portanto, \code{rp} deve ir ``na frente'' da fila. Como \code{diff} é 0, \code{*front=1}.
+      \item Além disso, damos um tempo de ticks igual ao número de ticks equivalente a um quantum.
+    \end{enumerate}
+  \item~\\
+  \begin{enumerate}[label=2.\arabic*.]
+    \item No segundo caso, \code{diff > 0} (linha 31).
+    \item Ou seja, \code{rp} está ``adiantado'' em relação ao processo mais ``atrasado''.
+    \item Isto indica que devemos rodar o processo mais atrasado antes de \code{rp}.
+    \item Portanto, \code{rp} deve ir no final da fila e dar passagem para os processos atrasados,
+      e já que \mcode{diff $> 0$}, então \code{*front=0}.
+    \item Como vamos ``pular'' este processo, damos um tempo de 0 ticks restantes e pomos no final
+      da fila.
+  \end{enumerate}
+\end{enumerate}
+
+Perceba que, quando todos os processos ``empatarem'' em relação ao tempo de execução, um deles será
+escolhido e dado um tempo equivalente a um quantum de tempo. Quando este terminar, todos os outros
+processos também percorrerão um quantum de tempo cada um, um de cada vez. Além disso, todos os
+processos que estão na frente esperarão os atrasados. Isso é a definição de escalonamento
+\textit{Round Robin}, como foi pedido no enunciado quando todos os processos empatam.
+
+Ao final da função, anunciamos que a fila de prioridade a ser usada é aquela indexada por
+\code{BATCH_Q} (linha 34). Em seguida, atribuímos o valor de \code{diff} como descrito
+anteriormente.
+
+Agora resta chamarmos a função de escalonamento. Faremos isso dentro da função \code{enqueue}, no
+próprio \code{proc.c}.
+
+\begin{minted}[linenos=true,gobble=2,frame=lines,mathescape=true]{c}
+  PRIVATE void enqueue(rp)
+  register struct proc *rp; /* this process is now runnable */
+  {
+    /* $\ldots$ */
+    /* Determine where to insert to process. */
+      /* ########################################################## */
+      if (rp->p_priority == BATCH_Q)
+        sched_batch(rp, &q, &front);
+      else
+      /* ########################################################## */
+        sched(rp, &q, &front);
+    /* $\ldots$ */
+  }
+\end{minted}
+
+Quando o processo a ser escalonado tem prioridade igual a \code{BATCH_Q}, escalonamos com a função
+\code{sched_batch}, senão escalonamos normalmente com \code{sched}.
 
 \end{document}

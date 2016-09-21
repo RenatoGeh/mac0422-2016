@@ -1,0 +1,2 @@
+let g:neomake_tex_enabled_makers = ['chktex']
+let g:neomake_tex_chktex_args = ['--nowarn', '29', '--nowarn', '3', '--nowarn', '36', '--nowarn', '26', '--nowarn', '13', '--nowarn', '8', '--nowarn', '33']
