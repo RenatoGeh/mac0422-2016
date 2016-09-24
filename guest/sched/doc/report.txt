@@ -1,3 +1,15 @@
+arquivos alterados:
+/usr/src/servers/pm/table.c
+/usr/src/servers/pm/misc.c
+/usr/src/servers/pm/proto.h
+/usr/src/lib/posix/Makefile.in
+/usr/src/include/minix/callnr.h
+/usr/include/minix/callnr.h
+
+arquivos adicionados:
+/usr/src/lib/posix/_fork_batch.c
+
+
 Implementação da chamada de sistema:
 
 O servidor responsável pela nossa função é o Proccess Manager, então seus arquivos que são modificados, que estão em 

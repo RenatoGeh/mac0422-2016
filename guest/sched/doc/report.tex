@@ -60,7 +60,7 @@ Escalonamento de Processos
 \\\vspace{2mm}\footnotesize
   Sistemas Operacionais --- MAC0422\\\rule{10cm}{0.8pt}}
 \author[]{Renato Lui Geh\\NUSP\@: 8536030\\
-          Guilherme Freire\\NUSP\@: }
+          Guilherme Freire\\NUSP\@: 7557373}
 
 \begin{document}
 \date{\today}
@@ -76,6 +76,18 @@ Os arquivos modificados foram:
 \begin{itemize}
   \item \code{/usr/local/src/kernel/proc.c}
   \item \code{/usr/local/src/kernel/proc.h}
+  \item \code{/usr/src/servers/pm/table.c}
+  \item \code{/usr/src/servers/pm/misc.c}
+  \item \code{/usr/src/servers/pm/proto.h}
+  \item \code{/usr/src/lib/posix/Makefile.in}
+  \item \code{/usr/src/include/minix/callnr.h}
+  \item \code{/usr/include/minix/callnr.h}
+\end{itemize}
+
+Um arquivo foi adicionado:
+
+\begin{itemize}
+  \item \code{/usr/src/lib/posix/_fork_batch.c}
 \end{itemize}
 
 Quando os blocos de código transcritos neste relatório não forem muito grandes, vamos indicar as
@@ -246,5 +258,82 @@ próprio \code{proc.c}.
 
 Quando o processo a ser escalonado tem prioridade igual a \code{BATCH_Q}, escalonamos com a função
 \code{sched_batch}, senão escalonamos normalmente com \code{sched}.
+
+Agora vamos discutir como é feita a tarefa 2, a chamada de sistema:
+
+A implementação é feita alterando arquivos do servidor responsável pelo gerenciamento de processos, o Proccess Manager. Eles estão localizados em
+
+\begin{itemize}
+  \item \code{/usr/src/servers/pm/}
+\end{itemize}
+
+Primeiro, encontramos no arquivo table.c um endereço que não está sendo utilizado para alocar a nossa função. O endereço escolhido é o 64, então temos (linha 83 do arquivo):
+  
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-  do_getset,  /* 63 = getpgrp */
++
++  /* ####################################### */
++  do_fork_batch,    /* 64 = unused */
++  /* ####################################### */
+\end{lstlisting}
+
+Nossa função está implementada dentro do arquivo misc.c (linha 31), e declarada no arquivo proto.h (linha 60):
+  
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-   /* misc.c */
++   _PROTOTYPE( int do_fork_batch, (void) );
+\end{lstlisting}
+
+Modificado esses três arquivos, o próximo passo foi compilar o Proccess Manager, utilizando o Makefile dentro de \code{/usr/src/servers/}
+
+  
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+  /usr/src/servers/make image
+  /usr/src/servers/make install
+\end{lstlisting}
+
+Nesse ponto temos a função implementada, mas não explícita para o usuário. Para isso, primeiro definimos sua constante nos arquivos (linha 58 em ambos) /\code{usr/src/include/minix/callnr.h} e \code{/usr/include/minix/callnr.h}
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+- #define GETPGRP     63
++/* ########################################## */
++#define FORK_BATCH        64
++/* ########################################## */
+\end{lstlisting}
+
+Adicionamos também, uma função que encapsula a syscall, facilitando para o usuário. Ela está contida num arquivo novo
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+ /usr/src/lib/posix/_fork_batch.c
+\end{lstlisting}
+
+Precisamos inserir esse arquivo novo no Makefile, para poder ser compilado com a biblioteca, então em \code{/usr/src/lib/posix/Makefile.in} adicionamos (linha 32), 
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+ _fork_batch.c\
+\end{lstlisting}
+
+e depois executamos
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+  make Makefile
+\end{lstlisting}
+
+É possível então fazer a nova biblioteca com: 
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+  /usr/src/make libraries
+\end{lstlisting}
+
+Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}
+
+Para salvar essa nova configuração, precisamos criar uma imagem do sistema. Assim é possível dar boot nela em outras sessões. O comando é:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/usr/src/tools/make hdboot
+/usr/src/tools/make install
+\end{lstlisting}
+
+A imagem criada fica em \code{/boot/image/}.
 
 \end{document}
