@@ -9,6 +9,9 @@
  *   do_freemem: deallocate a chunk of memory  (Jorrit N. Herder)
  *   do_getsetpriority: get/set process priority
  *   do_svrctl: process manager control
+ * ##############################################################
+ *   do_fork_batch: forks a new batch process
+ * ##############################################################
  */
 
 #include "pm.h"
@@ -25,13 +28,17 @@
 #include "param.h"
 #include "../../kernel/proc.h"
 
-
-
 /* ############################################################## */
 PUBLIC int do_fork_batch()
 {
-  printf("\TODO fork here\n");
-  return(OK);
+  int proc_id;
+
+  proc_id = do_fork();
+  if (proc_id == EAGAIN || proc_id == ENOMEM)
+    return proc_id;
+  sys_nice(proc_id, BATCH_Q);
+
+  return proc_id;
 }
 /* ############################################################## */
 

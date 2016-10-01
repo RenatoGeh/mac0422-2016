@@ -650,7 +650,7 @@ int *front;   /* return: front or back */
   batch_it = rdy_head[BATCH_Q];
   diff = 0;
   lmin = -1;
-  if (batch_it->p_time_left <= 0) {
+  if (batch_it->p_ticks_left <= 0) {
     /* Find `last` proc wrt user time */
     for (; batch_it != NIL_PROC; batch_it = batch_it->p_nextready) {
       if (batch_it == rp) continue;
@@ -663,7 +663,7 @@ int *front;   /* return: front or back */
     diff = rp->p_user_time - lmin;
     /* If diff == 0, rp is next to lmin => rp must go front */
     if (diff <= 0)
-      rp->p_ticks_left = rp->p_quantum_time;
+      rp->p_ticks_left = rp->p_quantum_size;
     /* Else, rp is `in front` of lmin => rp must wait for last proc */
     else
       rp->p_ticks_left = 0;
