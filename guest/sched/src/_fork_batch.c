@@ -1,8 +1,8 @@
 #include <lib.h>
 #include <unistd.h>
 
-PUBLIC int fork_batch(void)
+PUBLIC pid_t fork_batch()
 {
   message m;
-  return (_syscall(PM_PROC_NR,FORK_BATCH,&m));
+  return (_syscall(MM, FORK_BATCH, &m));
 }

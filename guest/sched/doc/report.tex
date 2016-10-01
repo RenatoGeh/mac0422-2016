@@ -69,13 +69,13 @@ Escalonamento de Processos
 \section{Introdução}
 
 O EP foi feito em um Minix 3.1.2a simulado pela VM VirtualBox. Os arquivos fonte estão localizados
-em \code{/usr/local/src/}.
+em \code{/usr/local/}.
 
 Os arquivos modificados foram:
 
 \begin{itemize}
-  \item \code{/usr/local/src/kernel/proc.c}
-  \item \code{/usr/local/src/kernel/proc.h}
+  \item \code{/usr/src/kernel/proc.c}
+  \item \code{/usr/src/kernel/proc.h}
   \item \code{/usr/src/servers/pm/table.c}
   \item \code{/usr/src/servers/pm/misc.c}
   \item \code{/usr/src/servers/pm/proto.h}
@@ -84,17 +84,20 @@ Os arquivos modificados foram:
   \item \code{/usr/include/minix/callnr.h}
 \end{itemize}
 
-Um arquivo foi adicionado:
+As versões modificadas estão em \code{/usr/local/}, assim como os arquivos não modificados. Deste
+jeito, pode-se rodar \code{/usr/local/src/tools/Makefile} sem alterar o código original. Um arquivo
+foi adicionado:
 
 \begin{itemize}
-  \item \code{/usr/src/lib/posix/_fork_batch.c}
+  \item \code{/usr/local/src/lib/posix/_fork_batch.c}
 \end{itemize}
 
 Quando os blocos de código transcritos neste relatório não forem muito grandes, vamos indicar as
 modificações feitas. Um símbolo \code{-} no início da linha indica a linha original no Minix. Um
 símbolo \code{+} no início da linha indica a nova linha adaptada para o EP\@. Uma linha vazia com o
 símbolo \code{-} indica que no código original a linha não existia. Analogamente, \code{+} em uma
-linha vazia indica que deletamos a linha original.
+linha vazia indica que deletamos a linha original. Um \code{#} indica um comentário no código, ou
+seja, a linha indicada por este símbolo não existe no arquivo original.
 
 \section{Kernel}
 
@@ -141,6 +144,7 @@ primeiro declarar a nova função de escalonamento em batch:
 
 Vamos agora transcrever e analisar a nova função \code{sched_batch} que trata do escalonamento em
 batch.
+\newpage
 
 \begin{minted}[linenos=true,gobble=2,frame=lines]{c}
   /*=================================================================*
@@ -259,81 +263,208 @@ próprio \code{proc.c}.
 Quando o processo a ser escalonado tem prioridade igual a \code{BATCH_Q}, escalonamos com a função
 \code{sched_batch}, senão escalonamos normalmente com \code{sched}.
 
-Agora vamos discutir como é feita a tarefa 2, a chamada de sistema:
+\section{Preparando o \code{syscall}}
 
-A implementação é feita alterando arquivos do servidor responsável pelo gerenciamento de processos, o Proccess Manager. Eles estão localizados em
+Para criarmos a \textit{system call}, vamos primeiro alterar os arquivos do servidor responsável
+pelo gerenciamento de processos (\code{process manager}), que se encontram em
 
-\begin{itemize}
-  \item \code{/usr/src/servers/pm/}
-\end{itemize}
-
-Primeiro, encontramos no arquivo table.c um endereço que não está sendo utilizado para alocar a nossa função. O endereço escolhido é o 64, então temos (linha 83 do arquivo):
-  
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
--  do_getset,  /* 63 = getpgrp */
-+
+/usr/src/servers/pm/
+\end{lstlisting}
+
+Primeiro, encontramos no arquivo \code{table.c} um endereço que não está sendo utilizado para
+alocar a nossa função. O endereço escolhido é o 57, então temos:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-  no_sys, /* 57 = unused */
 +  /* ####################################### */
-+  do_fork_batch,    /* 64 = unused */
++  do_fork_batch,    /* 57 = FORK_BATCH */
 +  /* ####################################### */
 \end{lstlisting}
 
-Nossa função está implementada dentro do arquivo misc.c (linha 31), e declarada no arquivo proto.h (linha 60):
-  
+Nossa função está implementada dentro do arquivo \code{misc.c} (linha 31), e declarada no arquivo
+\code{proto.h} (linha 60):
+
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
--   /* misc.c */
-+   _PROTOTYPE( int do_fork_batch, (void) );
+-
++ _PROTOTYPE(int do_fork_batch, (void));
 \end{lstlisting}
 
-Modificado esses três arquivos, o próximo passo foi compilar o Proccess Manager, utilizando o Makefile dentro de \code{/usr/src/servers/}
+Modificado esses três arquivos, o próximo passo foi compilar o Process Manager, utilizando o
+Makefile dentro de \code{/usr/local/src/servers/}
 
-  
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-  /usr/src/servers/make image
-  /usr/src/servers/make install
+cd /usr/local/src/servers/
+make image
+make install
 \end{lstlisting}
 
-Nesse ponto temos a função implementada, mas não explícita para o usuário. Para isso, primeiro definimos sua constante nos arquivos (linha 58 em ambos) /\code{usr/src/include/minix/callnr.h} e \code{/usr/include/minix/callnr.h}
+Nesse ponto temos a função implementada, mas não explícita para o usuário. Para isso, primeiro
+definimos sua constante nos arquivos \code{usr/local/include/minix/callnr.h} e
+\code{/usr/local/include/minix/callnr.h}
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-- #define GETPGRP     63
-+/* ########################################## */
-+#define FORK_BATCH        64
-+/* ########################################## */
+-
++ /* ########################################## */
++ #define FORK_BATCH        57
++ /* ########################################## */
 \end{lstlisting}
 
-Adicionamos também, uma função que encapsula a syscall, facilitando para o usuário. Ela está contida num arquivo novo
+Adicionamos também, uma função que encapsula a syscall, facilitando para o usuário. Ela está
+contida num arquivo novo:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
- /usr/src/lib/posix/_fork_batch.c
+/usr/local/src/lib/posix/_fork_batch.c
 \end{lstlisting}
 
-Precisamos inserir esse arquivo novo no Makefile, para poder ser compilado com a biblioteca, então em \code{/usr/src/lib/posix/Makefile.in} adicionamos (linha 32), 
+Precisamos inserir esse arquivo novo no Makefile, para poder ser compilado com a biblioteca, então
+em \code{/usr/local/src/lib/posix/Makefile.in} adicionamos (linha 32),
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
- _fork_batch.c\
+_fork_batch.c\
 \end{lstlisting}
 
 e depois executamos
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-  make Makefile
+make Makefile
 \end{lstlisting}
 
-É possível então fazer a nova biblioteca com: 
+É possível então fazer a nova biblioteca com:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-  /usr/src/make libraries
+cd /usr/local/src
+make libraries
 \end{lstlisting}
 
-Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}
-
-Para salvar essa nova configuração, precisamos criar uma imagem do sistema. Assim é possível dar boot nela em outras sessões. O comando é:
+Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}. Para salvar
+essa nova configuração, precisamos criar uma imagem do sistema. Assim é possível dar boot nela em
+outras sessões. O comando é:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/src/tools/make hdboot
-/usr/src/tools/make install
+cd /usr/local/src/tools
+make hdboot
+make install
 \end{lstlisting}
 
 A imagem criada fica em \code{/boot/image/}.
+
+\section{Sincronizando as tabelas}
+
+Como modificamos as tabelas em \code{pm}, também devemos modificar as tabelas em \code{fs}. Para
+isso vamos modificar os arquivos em \code{/usr/local/src/servers/fs/}:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+# /usr/local/src/servers/fs/table.c
+- no_sys,  /* 57 = unused */
++ /* ########################################## */
++ do_fork_batch,    /* 57 = FORK_BATCH */
++ /* ########################################## */
+\end{lstlisting}
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+# /usr/local/src/servers/fs/proto.h
+-
++ /* ########################################## */
++ do_fork_batch,    /* 57 = FORK_BATCH */
++ _PROTOTYPE(int do_fork_batch, (void));
++ /* ########################################## */
+\end{lstlisting}
+
+E para \code{/usr/local/src/servers/fs/misc.c}:
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  /* ################################################# */
+  /*===================================================*
+   *        do_fork_batch            *
+   *===================================================*/
+  PUBLIC int do_fork_batch()
+  {
+    return do_fork();
+  }
+  /* ################################################# */
+\end{minted}
+
+Como \code{/usr/local/src/servers/pm/misc.c} chama \code{do_fork}, precisamos tratar o caso de
+\code{do_fork} no \code{fs}. Para isso apenas chamamos \code{do_fork} do fs e retornamos o valor.
+
+\section{\code{do_fork_batch}}
+
+Agora resta implementar o \code{fork_batch}. Para tal, iremos modificar o arquivo
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/usr/local/src/servers/pm/misc.c
+\end{lstlisting}
+
+A escolha de termos utilizado \code{misc.c} ao invés de criado um novo arquivo \code{forkbatch.c}
+foi por causa da maior facilidade: \code{misc.c} já inclue \code{usr/local/src/kernel/proc.h} em
+seu código, assim como \code{usr/local/include/minix/callnr.h}, além de já ser um \code{target} no
+Makefile do \code{pm}.
+
+A função que fará o \code{fork batch} será chamada \code{do_fork_batch}, assim como foi mencionado
+na seção anterior. A função não receberá argumentos e retornará um inteiro que indica o
+\code{pid} (\textit{process id}) do processo filho se a chamada for bem sucedida. Caso contrário,
+a função retorna o erro:
+
+\begin{itemize}
+  \item \code{EAGAIN}: a tabela de processos está cheia.
+  \item \code{ENOMEM}: não há memória suficiente.
+\end{itemize}
+
+Vamos analizar a função:
+\newpage
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  PUBLIC int do_fork_batch()
+  {
+    int proc_id;
+
+    proc_id = do_fork();
+    if (proc_id == EAGAIN || proc_id == ENOMEM)
+      return proc_id;
+    sys_nice(proc_id, BATCH_Q);
+
+    return proc_id;
+  }
+\end{minted}
+
+Note que na linha 5 fazemos uma chamada para \code{do_fork}. Como já temos uma chamada em
+\code{/usr/local/src/servers/pm/forkexit.c} que faz exatamente o fork de um processo, vamos
+reutilizar a chamada.
+
+Em seguida vamos verificar a saída da chamada \code{do_fork}. Esta função retorna o ID do processo
+caso bem sucedida ou um erro caso falhe. No caso, a função apenas retorna \code{EAGAIN} ou
+\code{ENOMEM}, portanto verificamos na linha 6 por estes erros.
+
+Na linha seguinte chamamos \code{sys_nice}. Esta função aceita como argumentos o número do processo
+(ou seja, o \code{pid}) e a prioridade, respectivamente. Temos o \code{pid} da chamada
+\code{do_fork}. Só nos resta a prioridade. Mas como \code{misc.c} já inclue o header
+\code{/usr/local/src/kernel/proc.h}, podemos usar a macro definida na Seção 1: \code{BATCH_Q}.
+
+Finalmente, retornamos o processo que acabamos de criar.
+
+\section{Compilando}
+
+Para compilarmos tudo, rodamos os seguintes comandos:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+cd /usr/local/src/tools
+make clean install
+\end{lstlisting}
+
+Isto cria uma imagem
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/usr/local/src/tools/image
+\end{lstlisting}
+
+Que podemos colocar em \code{/boot/image/} e rodarmos com:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+cp /usr/local/src/tools/image /boot/image/batch_image
+shutdown
+image=/boot/image/batch_image
+boot
+\end{lstlisting}
 
 \end{document}

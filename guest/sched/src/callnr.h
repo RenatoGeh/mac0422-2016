@@ -47,16 +47,15 @@
 #define LSTAT		  50
 #define IOCTL		  54
 #define FCNTL		  55
+/* ########################################## */
+#define FORK_BATCH        57
+/* ########################################## */
 #define EXEC		  59
 #define UMASK		  60
 #define CHROOT		  61
 #define SETSID		  62
 #define GETPGRP		  63
 
-
-/* ########################################## */
-#define FORK_BATCH        64
-/* ########################################## */
 
 /* The following are not system calls, but are processed like them. */
 #define UNPAUSE		  65	/* to MM or FS: check for EINTR */

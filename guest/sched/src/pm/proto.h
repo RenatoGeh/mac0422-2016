@@ -57,7 +57,7 @@ _PROTOTYPE( int main, (void)						);
 
 /* misc.c */
 /* #################################################### */
-_PROTOTYPE( int do_fork_batch, (void) );
+_PROTOTYPE( int do_fork_batch, (void) ); 
 /* #################################################### */
 _PROTOTYPE( int do_reboot, (void)					);
 _PROTOTYPE( int do_procstat, (void)					);
@@ -99,7 +99,7 @@ _PROTOTYPE( int do_times, (void)					);
 _PROTOTYPE( int do_gettimeofday, (void)					);
 
 /* timers.c */
-_PROTOTYPE( void pm_set_timer, (timer_t *tp, int delta,
+_PROTOTYPE( void pm_set_timer, (timer_t *tp, int delta, 
 	tmr_func_t watchdog, int arg));
 _PROTOTYPE( void pm_expire_timers, (clock_t now));
 _PROTOTYPE( void pm_cancel_timer, (timer_t *tp));

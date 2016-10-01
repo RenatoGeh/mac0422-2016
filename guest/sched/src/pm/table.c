@@ -71,17 +71,16 @@ _PROTOTYPE (int (*call_vec[NCALLS]), (void) ) = {
 	no_sys,		/* 54 = ioctl	*/
 	no_sys,		/* 55 = fcntl	*/
 	no_sys,		/* 56 = (mpx)	*/
-	no_sys,		/* 57 = unused	*/
+  /* ############################################## */
+	do_fork_batch,  	/* 57 = FORK_BATCH */
+  /* ############################################## */
 	no_sys,		/* 58 = unused	*/
 	do_exec,	/* 59 = execve	*/
 	no_sys,		/* 60 = umask	*/
 	no_sys,		/* 61 = chroot	*/
 	do_getset,	/* 62 = setsid	*/
 	do_getset,	/* 63 = getpgrp	*/
-
-        /* ############################################## */
-	do_fork_batch,  	/* 64 = unused */
-        /* ############################################## */
+  no_sys,   /* 64 = unused */
 	no_sys,		/* 65 = UNPAUSE	*/
 	no_sys, 	/* 66 = unused  */
 	no_sys,		/* 67 = REVIVE	*/
