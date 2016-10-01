@@ -439,7 +439,7 @@ caso bem sucedida ou um erro caso falhe. No caso, a função apenas retorna \cod
 Na linha seguinte chamamos \code{sys_nice}. Esta função aceita como argumentos o número do processo
 (ou seja, o \code{pid}) e a prioridade, respectivamente. Temos o \code{pid} da chamada
 \code{do_fork}. Só nos resta a prioridade. Mas como \code{misc.c} já inclue o header
-\code{/usr/local/src/kernel/proc.h}, podemos usar a macro definida na Seção 1: \code{BATCH_Q}.
+\code{/usr/local/src/kernel/proc.h}, podemos usar a macro definida na Seção 2: \code{BATCH_Q}.
 
 Finalmente, retornamos o processo que acabamos de criar.
 
