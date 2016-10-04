@@ -74,14 +74,26 @@ em \code{/usr/local/}.
 Os arquivos modificados foram:
 
 \begin{itemize}
+  \item \code{/usr/include/unistd.h}
+  \item \code{/usr/include/minix/callnr.h}
+  \item \code{/usr/include/minix/com.h}
+  \item \code{/usr/include/minix/syslib.h}
   \item \code{/usr/src/kernel/proc.c}
   \item \code{/usr/src/kernel/proc.h}
-  \item \code{/usr/src/servers/pm/table.c}
-  \item \code{/usr/src/servers/pm/misc.c}
-  \item \code{/usr/src/servers/pm/proto.h}
-  \item \code{/usr/src/lib/posix/Makefile.in}
+  \item \code{/usr/src/include/unistd.h}
   \item \code{/usr/src/include/minix/callnr.h}
-  \item \code{/usr/include/minix/callnr.h}
+  \item \code{/usr/src/include/minix/com.h}
+  \item \code{/usr/src/include/minix/syslib.h}
+  \item \code{/usr/src/lib/posix/Makefile.in}
+  \item \code{/usr/src/lib/posix/_fork_batch.c}
+  \item \code{/usr/src/lib/syslib/Makefile.in}
+  \item \code{/usr/src/servers/fs/misc.c}
+  \item \code{/usr/src/servers/fs/proto.h}
+  \item \code{/usr/src/servers/fs/table.c}
+  \item \code{/usr/src/servers/pm/misc.c}
+  \item \code{/usr/src/servers/pm/utility.c}
+  \item \code{/usr/src/servers/pm/table.c}
+  \item \code{/usr/src/servers/pm/proto.h}
 \end{itemize}
 
 As versões modificadas estão em \code{/usr/local/}, assim como os arquivos não modificados. Deste
@@ -99,7 +111,7 @@ símbolo \code{-} indica que no código original a linha não existia. Analogame
 linha vazia indica que deletamos a linha original. Um \code{#} indica um comentário no código, ou
 seja, a linha indicada por este símbolo não existe no arquivo original.
 
-\section{Kernel}
+\section{Implementação}
 
 As modificações no kernel foram feitas nos arquivos:
 
@@ -330,24 +342,7 @@ e depois executamos
 make Makefile
 \end{lstlisting}
 
-É possível então fazer a nova biblioteca com:
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-cd /usr/local/src
-make libraries
-\end{lstlisting}
-
-Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}. Para salvar
-essa nova configuração, precisamos criar uma imagem do sistema. Assim é possível dar boot nela em
-outras sessões. O comando é:
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-cd /usr/local/src/tools
-make hdboot
-make install
-\end{lstlisting}
-
-A imagem criada fica em \code{/boot/image/}.
+Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}.
 
 \section{Sincronizando as tabelas}
 
@@ -387,6 +382,33 @@ E para \code{/usr/local/src/servers/fs/misc.c}:
 
 Como \code{/usr/local/src/servers/pm/misc.c} chama \code{do_fork}, precisamos tratar o caso de
 \code{do_fork} no \code{fs}. Para isso apenas chamamos \code{do_fork} do fs e retornamos o valor.
+
+\section{Kernel}
+
+Além de alterar os arquivos nos servers fs e pm, precisamos fazer com que o kernel também lide com essa nova função. Adicionamos então o arquivo
+
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/usr/src/lib/syslib/sys_fork_batch.c
+\end{lstlisting}
+
+Ele foi definido como uma kernel call em:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+usr/local/include/minix/com.h
+usr/local/src/include/minix/com.h
+\end{lstlisting}
+
+E seu protótipo declarado na lib:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+usr/local/include/minix/syslib.h
+usr/local/src/include/minix/syslib.h
+\end{lstlisting}
+
+Por fim, o \code{Makefile.in} é alterado para que o arquivo novo possa ser compilado.
+
+Essa alteração é bastante similar à dos servers.
 
 \section{\code{do_fork_batch}}
 
@@ -449,21 +471,19 @@ Para compilarmos tudo, rodamos os seguintes comandos:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 cd /usr/local/src/tools
-make clean install
+make fresh install
 \end{lstlisting}
 
-Isto cria uma imagem
+Isto cria uma imagem em 
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/local/src/tools/image
+/boot/image/<new_image>
 \end{lstlisting}
 
-Que podemos colocar em \code{/boot/image/} e rodarmos com:
-
+Para fazer o boot, basta desligar o Minix, setar a imagem para a nova e bootar:
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-cp /usr/local/src/tools/image /boot/image/batch_image
 shutdown
-image=/boot/image/batch_image
+image=/boot/image/<new_image>
 boot
 \end{lstlisting}
 
