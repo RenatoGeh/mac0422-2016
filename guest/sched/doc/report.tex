@@ -85,7 +85,6 @@ Os arquivos modificados foram:
   \item \code{/usr/src/include/minix/com.h}
   \item \code{/usr/src/include/minix/syslib.h}
   \item \code{/usr/src/lib/posix/Makefile.in}
-  \item \code{/usr/src/lib/posix/_fork_batch.c}
   \item \code{/usr/src/lib/syslib/Makefile.in}
   \item \code{/usr/src/servers/fs/misc.c}
   \item \code{/usr/src/servers/fs/proto.h}
@@ -102,6 +101,8 @@ foi adicionado:
 
 \begin{itemize}
   \item \code{/usr/local/src/lib/posix/_fork_batch.c}
+  \item \code{/usr/local/src/lib/syslib/sys_fork_batch.c}
+  \item \code{/usr/local/src/kernel/system/do_fork_batch.c}
 \end{itemize}
 
 Quando os blocos de código transcritos neste relatório não forem muito grandes, vamos indicar as
@@ -111,7 +112,7 @@ símbolo \code{-} indica que no código original a linha não existia. Analogame
 linha vazia indica que deletamos a linha original. Um \code{#} indica um comentário no código, ou
 seja, a linha indicada por este símbolo não existe no arquivo original.
 
-\section{Implementação}
+\section{Escalonamento}
 
 As modificações no kernel foram feitas nos arquivos:
 
@@ -156,7 +157,6 @@ primeiro declarar a nova função de escalonamento em batch:
 
 Vamos agora transcrever e analisar a nova função \code{sched_batch} que trata do escalonamento em
 batch.
-\newpage
 
 \begin{minted}[linenos=true,gobble=2,frame=lines]{c}
   /*=================================================================*
