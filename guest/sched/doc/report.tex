@@ -80,6 +80,8 @@ Os arquivos modificados foram:
   \item \code{/usr/include/minix/syslib.h}
   \item \code{/usr/src/kernel/proc.c}
   \item \code{/usr/src/kernel/proc.h}
+  \item \code{/usr/src/kernel/system.h}
+  \item \code{/usr/src/kernel/system/Makefile}
   \item \code{/usr/src/include/unistd.h}
   \item \code{/usr/src/include/minix/callnr.h}
   \item \code{/usr/src/include/minix/com.h}
@@ -90,14 +92,13 @@ Os arquivos modificados foram:
   \item \code{/usr/src/servers/fs/proto.h}
   \item \code{/usr/src/servers/fs/table.c}
   \item \code{/usr/src/servers/pm/misc.c}
-  \item \code{/usr/src/servers/pm/utility.c}
-  \item \code{/usr/src/servers/pm/table.c}
   \item \code{/usr/src/servers/pm/proto.h}
+  \item \code{/usr/src/servers/pm/table.c}
 \end{itemize}
 
 As versões modificadas estão em \code{/usr/local/}, assim como os arquivos não modificados. Deste
-jeito, pode-se rodar \code{/usr/local/src/tools/Makefile} sem alterar o código original. Um arquivo
-foi adicionado:
+jeito, pode-se rodar \code{/usr/local/src/tools/Makefile} sem alterar o código original. Três
+arquivos foram adicionados:
 
 \begin{itemize}
   \item \code{/usr/local/src/lib/posix/_fork_batch.c}
@@ -112,9 +113,9 @@ símbolo \code{-} indica que no código original a linha não existia. Analogame
 linha vazia indica que deletamos a linha original. Um \code{#} indica um comentário no código, ou
 seja, a linha indicada por este símbolo não existe no arquivo original.
 
-\section{Escalonamento}
+\section{Escalonamento em batch}
 
-As modificações no kernel foram feitas nos arquivos:
+Para fazer o escalonamento em batch foram modificados os seguintes arquivos do kernel:
 
 \begin{enumerate}
   \item\label{proc_c} \code{/usr/local/src/kernel/proc.c}
@@ -275,17 +276,102 @@ próprio \code{proc.c}.
 Quando o processo a ser escalonado tem prioridade igual a \code{BATCH_Q}, escalonamos com a função
 \code{sched_batch}, senão escalonamos normalmente com \code{sched}.
 
-\section{Preparando o \code{syscall}}
+\section{Kernel call}
 
-Para criarmos a \textit{system call}, vamos primeiro alterar os arquivos do servidor responsável
-pelo gerenciamento de processos (\code{process manager}), que se encontram em
+Para criarmos a \textit{system call} \code{fork_batch}, precisamos criar uma \textit{kernel call}
+(no caso chamada de \code{sys_fork_batch}) que irá criar o novo processo e dar a prioridade de
+batch ao processo filho. Em seguida podemos criar uma \textit{system call} para mandarmos uma
+mensagem para o system task executar \code{sys_fork_batch}. Nesta seção trataremos da kernel call.
+Na seção seguinte iremos enunciar o \textit{system call} e finalmente, na última seção sobre a
+implementação, iremos mostrar como foi feita a chamada para usuário.
+
+Para criarmos o \textit{kernel call}, devemos avisar ao kernel que adicionamos uma syscall. Em
+\code{minix/com.h}, incrementamos o número de syscalls:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/src/servers/pm/
+- #define NR_SYS_CALLS 31
++ #define NR_SYS_CALLS 32
 \end{lstlisting}
 
-Primeiro, encontramos no arquivo \code{table.c} um endereço que não está sendo utilizado para
-alocar a nossa função. O endereço escolhido é o 57, então temos:
+E em seguida adicionamos uma nova macro sinalizando a nova kernel call:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-
++ #define SYS_FORK_BATCH (KERNEL CALL + 31) /* sys_fork_batch() */
+\end{lstlisting}
+
+Agora podemos criar uma nova \code{sys_function} em \mcode{$\ldots$/src/kernel/system/}. Mas antes
+vamos declarar o protótipo da função em \mcode{$\ldots$/include/minix/syslib.h}:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-
++ _PROTOTYPE(int sys_fork_batch, (int parent, int child, int*));
+\end{lstlisting}
+
+Agora devemos criar o handler para o \code{_taskcall}. Criamos o arquivo
+\mcode{$\ldots$/src/lib/syslib/sys_fork_batch.c}.
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  #include ``syslib.h''
+
+  PUBLIC int sys_fork_batch(parent, child, child_endpoint)
+  int parent;
+  int child;
+  int *child_endpoint;
+  {
+    /* A process has forked. Tell the kernel. */
+    message m;
+    int r;
+
+    m.PR_ENDPT = parent;
+    m.PR_SLOT = child;
+    r = _taskcall(SYSTASK, SYS_FORK_BATCH, &m);
+    *child_endpoint = m.PR_ENDPT;
+    return r;
+  }
+\end{minted}
+
+Compare com o arquivo \mcode{$\ldots$/src/lib/syslib/sys_fork.c}. Ambos são iguais com a exceção
+do \code{_taskcall}. Isso pois ambos criam um processo, porém \code{fork_batch} irá atribuir uma
+prioridade fixa ao processo.
+
+Agora podemos implementar o nosso \code{fork_batch} no kernel. Para isso, criamos um arquivo
+\mcode{$\ldots$/src/kernel/system/do_fork_batch.c}. O arquivo é igual ao seu \code{fork}
+equivalente, porém com a seguinte linha adicional:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+rpc->p_sys_time = 0;
+-
++ rpc->p_priority = rpc->p_max_priority = BATCH_Q;
+\end{lstlisting}
+
+Ou seja, daremos uma prioridade fixa \code{BATCH_Q}, que corresponde exatamente a nossa fila de
+prioridade \code{batch} enunciada na Seção 2. Agora precisamos avisar ao
+\mcode{$\ldots$/src/kernel/system.h} que implementamos tal função:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+-
++ _PROTOTYPE(int do_fork_batch, (message *m_ptr));
++ #if !USE_FORK_BATCH
++ #define do_fork_batch do_unused
++ #endif
+\end{lstlisting}
+
+Agora temos nossa kernel call, que será chamada a partir de um system call.
+
+\section{System call}
+
+Para criarmos a \textit{system call}, vamos primeiro alterar os arquivos do servidor responsável
+pelo process manager (pm) e do file system (fs), que se encontram em
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/usr/local/src/servers/pm
+/usr/local/src/servers/fs
+\end{lstlisting}
+
+Primeiro, encontramos no arquivo \mcode{$\ldots$/src/servers/pm/table.c} um endereço que não está
+sendo utilizado para alocar a nossa função. Também fazemos a mesma modificação em
+\mcode{$\ldots$/src/servers/fs/table.c}. O endereço escolhido é o 57, então temos:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 -  no_sys, /* 57 = unused */
@@ -294,26 +380,36 @@ alocar a nossa função. O endereço escolhido é o 57, então temos:
 +  /* ####################################### */
 \end{lstlisting}
 
-Nossa função está implementada dentro do arquivo \code{misc.c} (linha 31), e declarada no arquivo
-\code{proto.h} (linha 60):
+Em seguida declaramos o protótipo da função em \mcode{$\ldots$/src/servers/pm/proto.h} e em seu
+equivalente no \code{fs}:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 -
 + _PROTOTYPE(int do_fork_batch, (void));
 \end{lstlisting}
 
-Modificado esses três arquivos, o próximo passo foi compilar o Process Manager, utilizando o
-Makefile dentro de \code{/usr/local/src/servers/}
+Implementamos a função em \mcode{$\ldots$/src/servers/pm/misc.c}. Toda a função age igual ao seu
+equivalente \code{do_fork} em \mcode{$\ldots$/src/servers/pm/forkexit.c} com a exceção da linha:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-cd /usr/local/src/servers/
-make image
-make install
+-
++ rmc->mp_nice = BATCH_Q;
 \end{lstlisting}
 
-Nesse ponto temos a função implementada, mas não explícita para o usuário. Para isso, primeiro
-definimos sua constante nos arquivos \code{usr/local/include/minix/callnr.h} e
-\code{/usr/local/include/minix/callnr.h}
+Que diz ao \code{mproc} que a prioridade é \code{BATCH_Q}. E também os dois seguintes trechos:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+# Chama fork_batch ao inves de fork.
+- if((r=sys_fork(who_e, child_nr, &rmc->mp_endpoint)) != OK)
++ if((r=sys_fork_batch(who_e, child_nr, &rmc->mp_endpoint)) != OK)
+# Diz ao SO para atualizar o fs do novo processo rodando a funcao do FORK_BATCH em fs.
+- tell_fs(FORK, who_e, rmc->mp_endpoint, rmc->mp_pid);
++ tell_fs(FORK_BATCH, who_e, rmc->mp_endpoint, rmc->mp_pid);
+\end{lstlisting}
+
+Para o equivalente do \code{fs}, apenas chamamos \code{do_fork}, já que a atualização das tabelas
+é idêntico ao \code{fork} normal. Agora devemos dizer ao SO qual é o endereço da chamada de
+sistema. Em \mcode{$\ldots$minix/callnr.h}:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 -
@@ -322,148 +418,71 @@ definimos sua constante nos arquivos \code{usr/local/include/minix/callnr.h} e
 + /* ########################################## */
 \end{lstlisting}
 
-Adicionamos também, uma função que encapsula a syscall, facilitando para o usuário. Ela está
-contida num arquivo novo:
+Isso indica que o syscall 57 é definido pela chamada \code{FORK_BATCH}, que mapeia a função
+\code{do_fork_batch} no \code{callvec} da \code{table.c} modificada anteriormente.
+
+\section{Library handler}
+
+Agora que temos as syscalls e kernel calls, podemos chamar a função \code{fork_batch} por meio
+da \code{_syscall}:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/local/src/lib/posix/_fork_batch.c
+_syscall(PM_PROC_NR, FORK_BATCH, &m);
 \end{lstlisting}
 
-Precisamos inserir esse arquivo novo no Makefile, para poder ser compilado com a biblioteca, então
-em \code{/usr/local/src/lib/posix/Makefile.in} adicionamos (linha 32),
+Onde \code{m} é uma variável do tipo \code{message}. Mas a função \code{_syscall} não deve ser
+chamada pelo usuário diretamente. Para resolvermos esse problema, criaremos uma função de usuário
+que chama o syscall.
+
+Modificaremos o arquivo \mcode{$\ldots$/include/unistd.h}:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-_fork_batch.c\
-\end{lstlisting}
-
-e depois executamos
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-make Makefile
-\end{lstlisting}
-
-Agora é possível fazer a chamada de sistema utilizando o comando \code{fork_batch()}.
-
-\section{Sincronizando as tabelas}
-
-Como modificamos as tabelas em \code{pm}, também devemos modificar as tabelas em \code{fs}. Para
-isso vamos modificar os arquivos em \code{/usr/local/src/servers/fs/}:
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-# /usr/local/src/servers/fs/table.c
-- no_sys,  /* 57 = unused */
-+ /* ########################################## */
-+ do_fork_batch,    /* 57 = FORK_BATCH */
-+ /* ########################################## */
-\end{lstlisting}
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-# /usr/local/src/servers/fs/proto.h
 -
-+ /* ########################################## */
-+ do_fork_batch,    /* 57 = FORK_BATCH */
-+ _PROTOTYPE(int do_fork_batch, (void));
-+ /* ########################################## */
++ _PROTOTYPE(pid_t fork_batch, (void));
 \end{lstlisting}
 
-E para \code{/usr/local/src/servers/fs/misc.c}:
+E em seguida implementaremos a função em \code{/usr/local/src/lib/posix/_fork_bath.c} que fará a
+chamada \code{_syscall} pelo usuário:
 
 \begin{minted}[linenos=true,gobble=2,frame=lines]{c}
-  /* ################################################# */
-  /*===================================================*
-   *        do_fork_batch            *
-   *===================================================*/
-  PUBLIC int do_fork_batch()
+  #include <lib.h>
+  #include <unistd.h>
+
+  PUBLIC pid_t fork_batch()
   {
-    return do_fork();
-  }
-  /* ################################################# */
-\end{minted}
-
-Como \code{/usr/local/src/servers/pm/misc.c} chama \code{do_fork}, precisamos tratar o caso de
-\code{do_fork} no \code{fs}. Para isso apenas chamamos \code{do_fork} do fs e retornamos o valor.
-
-\section{Kernel}
-
-Além de alterar os arquivos nos servers fs e pm, precisamos fazer com que o kernel também lide com essa nova função. Adicionamos então o arquivo
-
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/src/lib/syslib/sys_fork_batch.c
-\end{lstlisting}
-
-Ele foi definido como uma kernel call em:
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-usr/local/include/minix/com.h
-usr/local/src/include/minix/com.h
-\end{lstlisting}
-
-E seu protótipo declarado na lib:
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-usr/local/include/minix/syslib.h
-usr/local/src/include/minix/syslib.h
-\end{lstlisting}
-
-Por fim, o \code{Makefile.in} é alterado para que o arquivo novo possa ser compilado.
-
-Essa alteração é bastante similar à dos servers.
-
-\section{\code{do_fork_batch}}
-
-Agora resta implementar o \code{fork_batch}. Para tal, iremos modificar o arquivo
-
-\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/usr/local/src/servers/pm/misc.c
-\end{lstlisting}
-
-A escolha de termos utilizado \code{misc.c} ao invés de criado um novo arquivo \code{forkbatch.c}
-foi por causa da maior facilidade: \code{misc.c} já inclue \code{usr/local/src/kernel/proc.h} em
-seu código, assim como \code{usr/local/include/minix/callnr.h}, além de já ser um \code{target} no
-Makefile do \code{pm}.
-
-A função que fará o \code{fork batch} será chamada \code{do_fork_batch}, assim como foi mencionado
-na seção anterior. A função não receberá argumentos e retornará um inteiro que indica o
-\code{pid} (\textit{process id}) do processo filho se a chamada for bem sucedida. Caso contrário,
-a função retorna o erro:
-
-\begin{itemize}
-  \item \code{EAGAIN}: a tabela de processos está cheia.
-  \item \code{ENOMEM}: não há memória suficiente.
-\end{itemize}
-
-Vamos analizar a função:
-\newpage
-
-\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
-  PUBLIC int do_fork_batch()
-  {
-    int proc_id;
-
-    proc_id = do_fork();
-    if (proc_id == EAGAIN || proc_id == ENOMEM)
-      return proc_id;
-    sys_nice(proc_id, BATCH_Q);
-
-    return proc_id;
+    message m;
+    return _syscall(MM, FORK_BATCH, &m);
   }
 \end{minted}
 
-Note que na linha 5 fazemos uma chamada para \code{do_fork}. Como já temos uma chamada em
-\code{/usr/local/src/servers/pm/forkexit.c} que faz exatamente o fork de um processo, vamos
-reutilizar a chamada.
+Note que \code{MM} é definido em \code{lib.h} como:
 
-Em seguida vamos verificar a saída da chamada \code{do_fork}. Esta função retorna o ID do processo
-caso bem sucedida ou um erro caso falhe. No caso, a função apenas retorna \code{EAGAIN} ou
-\code{ENOMEM}, portanto verificamos na linha 6 por estes erros.
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+#define MM PM_PROC_NR
+\end{lstlisting}
 
-Na linha seguinte chamamos \code{sys_nice}. Esta função aceita como argumentos o número do processo
-(ou seja, o \code{pid}) e a prioridade, respectivamente. Temos o \code{pid} da chamada
-\code{do_fork}. Só nos resta a prioridade. Mas como \code{misc.c} já inclue o header
-\code{/usr/local/src/kernel/proc.h}, podemos usar a macro definida na Seção 2: \code{BATCH_Q}.
+Portanto, no final \code{fork_batch} apenas servirá de \textit{wrapper} para a chamada de função
+\code{_syscall}.
 
-Finalmente, retornamos o processo que acabamos de criar.
+\section{Usando \code{fork_batch}}
+
+Agora podemos chamar a nossa nova função \code{fork_batch} da seguinte forma:
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+  pid_t chid;
+  chid = fork_batch();
+  if (chid == 0) {
+    /* Processo pai */
+  } else if (chid == EAGAIN || chid == ENOMEM) {
+    if (chid == EAGAIN) {
+      /* Tabela de processos cheia */
+    } else {
+      /* Sem memoria */
+    }
+  } else {
+    /* Processo filho */
+  }
+\end{minted}
 
 \section{Compilando}
 
@@ -474,17 +493,34 @@ cd /usr/local/src/tools
 make fresh install
 \end{lstlisting}
 
-Isto cria uma imagem em 
+Isto cria uma nova imagem em \code{/boot/image/} com a convenção:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
-/boot/image/<new_image>
+3.1.2arN
 \end{lstlisting}
 
-Para fazer o boot, basta desligar o Minix, setar a imagem para a nova e bootar:
+Onde \code{N} é a versão da imagem. Para rodarmos a imagem para aplicarmos as modificações feitas
+no código:
+
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 shutdown
-image=/boot/image/<new_image>
+image=/boot/image/3.1.2arN
 boot
+\end{lstlisting}
+
+\section{Testes}
+
+Fizemos alguns testes que se encontram no diretório \code{/home/ep2}. Apenas compile e rode. Para
+executar o teste com o \code{fork} normal, não use argumentos. Para executar o teste como
+\code{fork_batch}, adicione um argumento.
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+# Rodando com fork normal:
+cc test.c
+./a.out
+# Rodando com fork_batch:
+cc test.c
+./a.out 0
 \end{lstlisting}
 
 \end{document}
