@@ -508,6 +508,34 @@ image=/boot/image/3.1.2arN
 boot
 \end{lstlisting}
 
+\section{Observações importantes quanto a execução do EP}
+
+Como usamos um Floppy Controller na nossa VM, a tela inicial irá indicar que não foi encontrado um
+local de boot. Para resolver isto, pressione \code{F12} e em seguida pressione \code{1}. Isto
+selecionará o controlador principal (a que possue a imagem do Minix) como local de boot.
+
+Como não mudamos o caminho de boot padrão do Minix, quando a VM for rodada, deve-se dar boot na
+imagem correta. Por padrão, a VM irá dar boot na imagem padrão original.
+
+É recomendável que se recompile o Minix novamente para garantir que tudo esteja o mais recente
+possível. Caso não se recompile o Minix, a imagem em \code{/boot/image} mais recente é:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+/boot/image/3.1.2ar30
+\end{lstlisting}
+
+Para rodar a imagem escolhida, basta indicar o caminho. Por exemplo, caso a imagem desejada seja
+\code{/boot/image/3.1.2ar30}, então:
+
+\begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
+# Garanta que esteja na tela de boot.
+shutdown
+# Indique qual imagem deve ser escolhida.
+image=/boot/image/3.1.2ar30
+# Faca o boot.
+boot
+\end{lstlisting}
+
 \section{Testes}
 
 Fizemos alguns testes que se encontram no diretório \code{/home/ep2}. Apenas compile e rode. Para
