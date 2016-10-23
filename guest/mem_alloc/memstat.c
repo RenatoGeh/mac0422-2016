@@ -41,7 +41,7 @@ int main(int argc, char *args[]) {
       sleep(1);
     }
   }
-  
+
   return 0;
 }
 
@@ -49,7 +49,7 @@ int main(int argc, char *args[]) {
 void getsysinfo(int who, int what, void *where) {
   message m;
   m.m1_i1 = what;
-  m.m1_p1 = where;  
+  m.m1_p1 = where;
   _syscall(who, GETSYSINFO, &m);
 }
 
@@ -86,6 +86,6 @@ void print_holes(void) {
 
   getsysinfo(MM, SI_MEM_ALLOC, &store);
   n = mem_data(store.pmi_holes, &mean, &median, &stddev);
-  
+
   printf("%d\t%.2f\t%.2f\t%.2f\n", n, mean, median, stddev);
 }
