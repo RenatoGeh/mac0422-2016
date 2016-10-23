@@ -59,15 +59,16 @@ FORWARD _PROTOTYPE( int swap_out, (void)				    );
 #endif
 
 /* ############################################################## */
+/* Most of the alloc_mem() is altered to accept
+ * FIRST_FIT, WORST_FIT, BEST_FIT and RANDOM_FIT. */
+
 PRIVATE int alloc_policy = FIRST_FIT;
-PRIVATE register struct hole *nf_prev_ptr = NULL;
-/* ############################################################## */
 
 /*===========================================================================*
- *				alloc_mem				     *
+ *        alloc_mem            *
  *===========================================================================*/
 PUBLIC phys_clicks alloc_mem(clicks)
-phys_clicks clicks;		/* amount of memory requested */
+phys_clicks clicks;   /* amount of memory requested */
 {
 /* Allocate a block of memory from the free list using first fit. The block
  * consists of a sequence of contiguous bytes, whose length in clicks is
@@ -75,62 +76,153 @@ phys_clicks clicks;		/* amount of memory requested */
  * always on a click boundary.  This procedure is called when memory is
  * needed for FORK or EXEC.  Swap other processes out if needed.
  */
-  register struct hole *hp, *prev_ptr;
-  phys_clicks old_base;
+	int have_candidate_flag, possible_candidates, selected, i;
+	register struct hole *hp, *prev_ptr;
+	register struct hole *worst_candidate, *worst_prev_ptr;
+	register struct hole *best_candidate, *best_prev_ptr;
+	phys_clicks old_base;
 
-  do {
-        prev_ptr = NIL_HOLE;
-  /* ############################################################## */
-  if (alloc_policy == NEXT_FIT) {
-    if (nf_prev_ptr == NULL)
-      nf_prev_ptr = hole_head;
-    hp = nf_prev_ptr;
-  } else
-	  hp = hole_head;
-  /* Currently using FIRST_FIT. To use other policies, we must have
-   * other halting criteria for the loop below. */
-  /* ############################################################## */
-	while (hp != NIL_HOLE && hp->h_base < swap_base) {
-		if (hp->h_len >= clicks) {
-			/* We found a hole that is big enough.  Use it. */
-			old_base = hp->h_base;	/* remember where it started */
-			hp->h_base += clicks;	/* bite a piece off */
-			hp->h_len -= clicks;	/* ditto */
+	do {
+		if (alloc_policy == FIRST_FIT) {
+			prev_ptr = NIL_HOLE;
+			hp = hole_head;
 
-			/* Remember new high watermark of used memory. */
-			if(hp->h_base > high_watermark)
-				high_watermark = hp->h_base;
+			while (hp != NIL_HOLE && hp->h_base < swap_base) {
+				if (hp->h_len >= clicks) {
+					/* We found a hole that is big enough.  Use it. */
+					old_base = hp->h_base;	/* remember where it started */
+					hp->h_base += clicks;	/* bite a piece off */
+					hp->h_len -= clicks;	/* ditto */
 
-			/* Delete the hole if used up completely. */
-			if (hp->h_len == 0) del_slot(prev_ptr, hp);
+					/* Remember new high watermark of used memory. */
+					if(hp->h_base > high_watermark)
+						high_watermark = hp->h_base;
 
-			/* Return the start address of the acquired block. */
-			return(old_base);
+					/* Delete the hole if used up completely. */
+					if (hp->h_len == 0) del_slot(prev_ptr, hp);
+
+					/* Return the start address of the acquired block. */
+					return(old_base);
+				}
+
+				prev_ptr = hp;
+				hp = hp->h_next;
+			}
+		} else if (alloc_policy == WORST_FIT) {
+			prev_ptr = hole_head;
+			hp = hole_head->h_next;
+
+			worst_prev_ptr = NIL_HOLE;
+			worst_candidate = hole_head;
+
+			while (hp != NIL_HOLE && hp->h_base < swap_base) {
+				if (hp->h_len > worst_candidate->h_len) {
+					worst_prev_ptr = prev_ptr;
+					worst_candidate = hp;
+				}
+				prev_ptr = hp;
+				hp = hp->h_next;
+			}
+
+			if (worst_candidate->h_len >= clicks) {
+				old_base = worst_candidate->h_base;
+				worst_candidate->h_base += clicks;
+				worst_candidate->h_len -= clicks;
+
+				if(worst_candidate->h_base > high_watermark)
+					high_watermark = worst_candidate->h_base;
+
+				if (worst_candidate->h_len == 0)
+					del_slot(worst_prev_ptr, worst_candidate);
+
+				return(old_base);
+			}
+		} else if (alloc_policy == BEST_FIT) {
+			prev_ptr = NIL_HOLE;
+			hp = hole_head;
+
+			best_prev_ptr = NIL_HOLE;
+			best_candidate = hole_head;
+
+			have_candidate_flag = 0;
+
+			while (hp != NIL_HOLE && hp->h_base < swap_base) {
+				if (hp->h_len <= best_candidate->h_len && hp->h_len >= clicks) {
+					best_prev_ptr = prev_ptr;
+					best_candidate = hp;
+					have_candidate_flag = 1;
+				}
+				prev_ptr = hp;
+				hp = hp->h_next;
+			}
+
+			if (have_candidate_flag == 1) {
+				old_base = best_candidate->h_base;
+				best_candidate->h_base += clicks;
+				best_candidate->h_len -= clicks;
+
+				if(best_candidate->h_base > high_watermark)
+					high_watermark = best_candidate->h_base;
+
+				if (best_candidate->h_len == 0)
+					del_slot(best_prev_ptr, best_candidate);
+
+				return(old_base);
+			}
+		} else if (alloc_policy == RANDOM_FIT) {
+			hp = hole_head;
+
+			possible_candidates = 0;
+
+			while (hp != NIL_HOLE && hp->h_base < swap_base) {
+				if (hp->h_len >= clicks) {
+					possible_candidates++;
+				}
+				hp = hp->h_next;
+			}
+
+			prev_ptr = NIL_HOLE;
+			hp = hole_head;
+
+			if (possible_candidates > 0) {
+				selected = (random() % possible_candidates) + 1;
+				i = 0;
+				while (hp != NIL_HOLE && hp->h_base < swap_base) {
+					if (hp->h_len >= clicks) {
+						i++;
+						if (i == selected) {
+							old_base = hp->h_base;
+							hp->h_base += clicks;
+							hp->h_len -= clicks;
+
+							if(hp->h_base > high_watermark)
+								high_watermark = hp->h_base;
+
+							if (hp->h_len == 0) del_slot(prev_ptr, hp);
+
+							return(old_base);
+						}
+					}
+					prev_ptr = hp;
+					hp = hp->h_next;
+				}
+			}
 		}
-
-		prev_ptr = hp;
-		hp = hp->h_next;
-    /* ############################################################## */
-    if (alloc_policy == NEXT_FIT)
-      nf_prev_ptr = prev_ptr;
-    /* ############################################################## */
-	}
-  } while (swap_out());		/* try to swap some other process out */
-  return(NO_MEM);
+	} while (swap_out());		/* try to swap some other process out */
+	return(NO_MEM);
 }
 
-/* ############################################################## */
 /*===========================================================================*
  *				do_alloc_algorithm				     *
  *===========================================================================*/
 PUBLIC int do_alloc_algorithm(policy)
 int policy;
 {
-  if (policy != FIRST_FIT || policy != BEST_FIT || policy != WORST_FIT
-      || policy != RANDOM_FIT || policy != NEXT_FIT)
-    return EINVAL; /* invalid argument error as defined in errno.h */
-  alloc_policy = policy;
-  return OK;
+	if (policy != FIRST_FIT && policy != BEST_FIT
+			&& policy != WORST_FIT && policy != RANDOM_FIT)
+		return EINVAL; /* invalid argument error as defined in errno.h */
+	alloc_policy = policy;
+	return OK;
 }
 /* ############################################################## */
 
@@ -146,39 +238,39 @@ phys_clicks clicks;		/* number of clicks to free */
  * to the hole list.  If it is contiguous with an existing hole on either end,
  * it is merged with the hole or holes.
  */
-  register struct hole *hp, *new_ptr, *prev_ptr;
+	register struct hole *hp, *new_ptr, *prev_ptr;
 
-  if (clicks == 0) return;
-  if ( (new_ptr = free_slots) == NIL_HOLE)
-  	panic(__FILE__,"hole table full", NO_NUM);
-  new_ptr->h_base = base;
-  new_ptr->h_len = clicks;
-  free_slots = new_ptr->h_next;
-  hp = hole_head;
+	if (clicks == 0) return;
+	if ( (new_ptr = free_slots) == NIL_HOLE)
+		panic(__FILE__,"hole table full", NO_NUM);
+	new_ptr->h_base = base;
+	new_ptr->h_len = clicks;
+	free_slots = new_ptr->h_next;
+	hp = hole_head;
 
-  /* If this block's address is numerically less than the lowest hole currently
-   * available, or if no holes are currently available, put this hole on the
-   * front of the hole list.
-   */
-  if (hp == NIL_HOLE || base <= hp->h_base) {
+	/* If this block's address is numerically less than the lowest hole currently
+	 * available, or if no holes are currently available, put this hole on the
+	 * front of the hole list.
+	 */
+	if (hp == NIL_HOLE || base <= hp->h_base) {
 	/* Block to be freed goes on front of the hole list. */
 	new_ptr->h_next = hp;
 	hole_head = new_ptr;
 	merge(new_ptr);
 	return;
-  }
+	}
 
-  /* Block to be returned does not go on front of hole list. */
-  prev_ptr = NIL_HOLE;
-  while (hp != NIL_HOLE && base > hp->h_base) {
+	/* Block to be returned does not go on front of hole list. */
+	prev_ptr = NIL_HOLE;
+	while (hp != NIL_HOLE && base > hp->h_base) {
 	prev_ptr = hp;
 	hp = hp->h_next;
-  }
+	}
 
-  /* We found where it goes.  Insert block after 'prev_ptr'. */
-  new_ptr->h_next = prev_ptr->h_next;
-  prev_ptr->h_next = new_ptr;
-  merge(prev_ptr);		/* sequence is 'prev_ptr', 'new_ptr', 'hp' */
+	/* We found where it goes.  Insert block after 'prev_ptr'. */
+	new_ptr->h_next = prev_ptr->h_next;
+	prev_ptr->h_next = new_ptr;
+	merge(prev_ptr);		/* sequence is 'prev_ptr', 'new_ptr', 'hp' */
 }
 
 /*===========================================================================*
@@ -195,14 +287,14 @@ register struct hole *hp;
  * the numbers of holes in memory, and requiring the elimination of one
  * entry in the hole list.
  */
-  if (hp == hole_head)
+	if (hp == hole_head)
 	hole_head = hp->h_next;
-  else
+	else
 	prev_ptr->h_next = hp->h_next;
 
-  hp->h_next = free_slots;
-  hp->h_base = hp->h_len = 0;
-  free_slots = hp;
+	hp->h_next = free_slots;
+	hp->h_base = hp->h_len = 0;
+	free_slots = hp;
 }
 
 /*===========================================================================*
@@ -216,27 +308,27 @@ register struct hole *hp;	/* ptr to hole to merge with its successors */
  * either or both ends.  The pointer 'hp' points to the first of a series of
  * three holes that can potentially all be merged together.
  */
-  register struct hole *next_ptr;
+	register struct hole *next_ptr;
 
-  /* If 'hp' points to the last hole, no merging is possible.  If it does not,
-   * try to absorb its successor into it and free the successor's table entry.
-   */
-  if ( (next_ptr = hp->h_next) == NIL_HOLE) return;
-  if (hp->h_base + hp->h_len == next_ptr->h_base) {
+	/* If 'hp' points to the last hole, no merging is possible.  If it does not,
+	 * try to absorb its successor into it and free the successor's table entry.
+	 */
+	if ( (next_ptr = hp->h_next) == NIL_HOLE) return;
+	if (hp->h_base + hp->h_len == next_ptr->h_base) {
 	hp->h_len += next_ptr->h_len;	/* first one gets second one's mem */
 	del_slot(hp, next_ptr);
-  } else {
+	} else {
 	hp = next_ptr;
-  }
+	}
 
-  /* If 'hp' now points to the last hole, return; otherwise, try to absorb its
-   * successor into it.
-   */
-  if ( (next_ptr = hp->h_next) == NIL_HOLE) return;
-  if (hp->h_base + hp->h_len == next_ptr->h_base) {
+	/* If 'hp' now points to the last hole, return; otherwise, try to absorb its
+	 * successor into it.
+	 */
+	if ( (next_ptr = hp->h_next) == NIL_HOLE) return;
+	if (hp->h_base + hp->h_len == next_ptr->h_base) {
 	hp->h_len += next_ptr->h_len;
 	del_slot(hp, next_ptr);
-  }
+	}
 }
 
 /*===========================================================================*
@@ -255,22 +347,22 @@ phys_clicks *free;		/* memory size summaries */
  * smaller holes), new table slots are needed to represent them.  These slots
  * are taken from the list headed by 'free_slots'.
  */
-  int i;
-  register struct hole *hp;
+	int i;
+	register struct hole *hp;
 
-  /* Put all holes on the free list. */
-  for (hp = &hole[0]; hp < &hole[_NR_HOLES]; hp++) {
+	/* Put all holes on the free list. */
+	for (hp = &hole[0]; hp < &hole[_NR_HOLES]; hp++) {
 	hp->h_next = hp + 1;
 	hp->h_base = hp->h_len = 0;
-  }
-  hole[_NR_HOLES-1].h_next = NIL_HOLE;
-  hole_head = NIL_HOLE;
-  free_slots = &hole[0];
+	}
+	hole[_NR_HOLES-1].h_next = NIL_HOLE;
+	hole_head = NIL_HOLE;
+	free_slots = &hole[0];
 
-  /* Use the chunks of physical memory to allocate holes. */
-  *free = 0;
-  for (i=NR_MEMS-1; i>=0; i--) {
-  	if (chunks[i].size > 0) {
+	/* Use the chunks of physical memory to allocate holes. */
+	*free = 0;
+	for (i=NR_MEMS-1; i>=0; i--) {
+		if (chunks[i].size > 0) {
 		free_mem(chunks[i].base, chunks[i].size);
 		*free += chunks[i].size;
 #if ENABLE_SWAP
@@ -278,14 +370,14 @@ phys_clicks *free;		/* memory size summaries */
 			swap_base = chunks[i].base + chunks[i].size;
 #endif
 	}
-  }
+	}
 
 #if ENABLE_SWAP
-  /* The swap area is represented as a hole above and separate of regular
-   * memory.  A hole at the size of the swap file is allocated on "swapon".
-   */
-  swap_base++;				/* make separate */
-  swap_maxsize = 0 - swap_base;		/* maximum we can possibly use */
+	/* The swap area is represented as a hole above and separate of regular
+	 * memory.  A hole at the size of the swap file is allocated on "swapon".
+	 */
+	swap_base++;				/* make separate */
+	swap_maxsize = 0 - swap_base;		/* maximum we can possibly use */
 #endif
 }
 
@@ -311,15 +403,15 @@ u32_t offset, size;			/* area on swap file to use */
 {
 /* Turn swapping on. */
 
-  if (swap_fd != -1) return(EBUSY);	/* already have swap? */
+	if (swap_fd != -1) return(EBUSY);	/* already have swap? */
 
-  tell_fs(CHDIR, who_e, FALSE, 0);	/* be like the caller for open() */
-  if ((swap_fd = open(file, O_RDWR)) < 0) return(-errno);
-  swap_offset = offset;
-  size >>= CLICK_SHIFT;
-  if (size > swap_maxsize) size = swap_maxsize;
-  if (size > 0) free_mem(swap_base, (phys_clicks) size);
-  return(OK);
+	tell_fs(CHDIR, who_e, FALSE, 0);	/* be like the caller for open() */
+	if ((swap_fd = open(file, O_RDWR)) < 0) return(-errno);
+	swap_offset = offset;
+	size >>= CLICK_SHIFT;
+	if (size > swap_maxsize) size = swap_maxsize;
+	if (size > 0) free_mem(swap_base, (phys_clicks) size);
+	return(OK);
 }
 
 /*===========================================================================*
@@ -328,32 +420,32 @@ u32_t offset, size;			/* area on swap file to use */
 PUBLIC int swap_off()
 {
 /* Turn swapping off. */
-  struct mproc *rmp;
-  struct hole *hp, *prev_ptr;
+	struct mproc *rmp;
+	struct hole *hp, *prev_ptr;
 
-  if (swap_fd == -1) return(OK);	/* can't turn off what isn't on */
+	if (swap_fd == -1) return(OK);	/* can't turn off what isn't on */
 
-  /* Put all swapped out processes on the inswap queue and swap in. */
-  for (rmp = &mproc[0]; rmp < &mproc[NR_PROCS]; rmp++) {
+	/* Put all swapped out processes on the inswap queue and swap in. */
+	for (rmp = &mproc[0]; rmp < &mproc[NR_PROCS]; rmp++) {
 	if (rmp->mp_flags & ONSWAP) swap_inqueue(rmp);
-  }
-  swap_in();
+	}
+	swap_in();
 
-  /* All in memory? */
-  for (rmp = &mproc[0]; rmp < &mproc[NR_PROCS]; rmp++) {
+	/* All in memory? */
+	for (rmp = &mproc[0]; rmp < &mproc[NR_PROCS]; rmp++) {
 	if (rmp->mp_flags & ONSWAP) return(ENOMEM);
-  }
+	}
 
-  /* Yes.  Remove the swap hole and close the swap file descriptor. */
-  for (hp = hole_head; hp != NIL_HOLE; prev_ptr = hp, hp = hp->h_next) {
+	/* Yes.  Remove the swap hole and close the swap file descriptor. */
+	for (hp = hole_head; hp != NIL_HOLE; prev_ptr = hp, hp = hp->h_next) {
 	if (hp->h_base >= swap_base) {
 		del_slot(prev_ptr, hp);
 		hp = hole_head;
 	}
-  }
-  close(swap_fd);
-  swap_fd = -1;
-  return(OK);
+	}
+	close(swap_fd);
+	swap_fd = -1;
+	return(OK);
 }
 
 /*===========================================================================*
@@ -366,15 +458,15 @@ register struct mproc *rmp;		/* process to add to the queue */
  * happens when such a process gets a signal, or if a reply message must be
  * sent, like when a process doing a wait() has a child that exits.
  */
-  struct mproc **pmp;
+	struct mproc **pmp;
 
-  if (rmp->mp_flags & SWAPIN) return;	/* already queued */
+	if (rmp->mp_flags & SWAPIN) return;	/* already queued */
 
 
-  for (pmp = &in_queue; *pmp != NULL; pmp = &(*pmp)->mp_swapq) {}
-  *pmp = rmp;
-  rmp->mp_swapq = NULL;
-  rmp->mp_flags |= SWAPIN;
+	for (pmp = &in_queue; *pmp != NULL; pmp = &(*pmp)->mp_swapq) {}
+	*pmp = rmp;
+	rmp->mp_swapq = NULL;
+	rmp->mp_flags |= SWAPIN;
 }
 
 /*===========================================================================*
@@ -385,13 +477,13 @@ PUBLIC void swap_in()
 /* Try to swap in a process on the inswap queue.  We want to send it a message,
  * interrupt it, or something.
  */
-  struct mproc **pmp, *rmp;
-  phys_clicks old_base, new_base, size;
-  off_t off;
-  int proc_nr;
+	struct mproc **pmp, *rmp;
+	phys_clicks old_base, new_base, size;
+	off_t off;
+	int proc_nr;
 
-  pmp = &in_queue;
-  while ((rmp = *pmp) != NULL) {
+	pmp = &in_queue;
+	while ((rmp = *pmp) != NULL) {
 	proc_nr = (rmp - mproc);
 	size = rmp->mp_seg[S].mem_vir + rmp->mp_seg[S].mem_len
 		- rmp->mp_seg[D].mem_vir;
@@ -419,7 +511,7 @@ PUBLIC void swap_in()
 		*pmp = rmp->mp_swapq;
 		check_pending(rmp);	/* a signal may have waked this one */
 	}
-  }
+	}
 }
 
 /*===========================================================================*
@@ -430,14 +522,14 @@ PRIVATE int swap_out()
 /* Try to find a process that can be swapped out.  Candidates are those blocked
  * on a system call that PM handles, like wait(), pause() or sigsuspend().
  */
-  struct mproc *rmp;
-  struct hole *hp, *prev_ptr;
-  phys_clicks old_base, new_base, size;
-  off_t off;
-  int proc_nr;
+	struct mproc *rmp;
+	struct hole *hp, *prev_ptr;
+	phys_clicks old_base, new_base, size;
+	off_t off;
+	int proc_nr;
 
-  rmp = outswap;
-  do {
+	rmp = outswap;
+	do {
 	if (++rmp == &mproc[NR_PROCS]) rmp = &mproc[0];
 
 	/* A candidate? */
@@ -474,8 +566,8 @@ PRIVATE int swap_out()
 
 	outswap = rmp;		/* next time start here */
 	return(TRUE);
-  } while (rmp != outswap);
+	} while (rmp != outswap);
 
-  return(FALSE);	/* no candidate found */
+	return(FALSE);	/* no candidate found */
 }
 #endif /* SWAP */

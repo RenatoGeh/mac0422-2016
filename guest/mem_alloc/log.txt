@@ -1,0 +1,16 @@
+Todas as mudanças que eu fiz nos arquivos do git foram aplicadas.
+
+Removi NEXT_FIT de
+	/usr/local/include/unistd.h
+	/usr/local/src/include/unistd.h.
+
+/usr/local/src/lib/posix/_alloc_algorithm.c
+	Comentei o define (estava dando erro)
+	Adicionei stdio.h + printf (para debugar, o print não aparece)
+
+pm/alloc.c
+	Adicionei stdio.h + printf
+	No do_alloc_algorithm(policy), a policy vem sempre 0.
+
+
+O _alloc_algorithm não está sendo chamado.
