@@ -63,6 +63,7 @@ FORWARD _PROTOTYPE( int swap_out, (void)				    );
  * FIRST_FIT, WORST_FIT, BEST_FIT and RANDOM_FIT. */
 
 PRIVATE int alloc_policy = FIRST_FIT;
+/* ############################################################## */
 
 /*===========================================================================*
  *        alloc_mem            *
