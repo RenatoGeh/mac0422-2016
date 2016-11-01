@@ -151,16 +151,16 @@
 \begin{frame}[fragile]
   \frametitle{GNU HURD}
 
-  HURD: Hird of Unix-Replacing Daemons
+  HURD\@: Hird of Unix-Replacing Daemons
 
-  HIRD: Hurd of Interfaces Representing Depth
+  HIRD\@: Hurd of Interfaces Representing Depth
 
   \begin{lstlisting}[mathescape=true,showstringspaces=false,numbers=none,frame=single]
-  GNU HURD := [
-    GNU  := GNU's Not Unix
-    HURD := [
-      HIRD := [
-        HURD := [
+  GNU HURD $:=$ [
+    GNU  $:=$ GNU's Not Unix
+    HURD $:=$ [
+      HIRD $:=$ [
+        HURD $:=$ [
           $\ldots$
         ] of Interfaces Representing Depth
       ] of Unix-Replacing Daemons
@@ -187,7 +187,110 @@
 
 \section{Microkernel/Mach}
 
+\begin{frame}
+  \frametitle{Kernel}
+  \begin{figure}[h]
+    \hspace*{-0.9cm}
+    \includegraphics[scale=0.235]{imgs/kernel.png}
+    \caption{\url{https://en.wikipedia.org/wiki/File:OS-structure2.svg}}
+  \end{figure}
+\end{frame}
 
+\begin{frame}
+  \frametitle{Comparação}
+  \begin{description}
+    \item[Microkernel] (e.g.\ Mach, kernel do Minix)
+      \begin{itemize}
+        \item Mais seguro
+        \item Comunicação por mensagens (MIG)
+        \item Responsabilidade bem definida
+        \item Flexível (fácil de debugar os diferentes servidores)
+        \item Mais estável
+        \item Somente o absolutamente necessário
+      \end{itemize}
+    \item[Monolítico] (e.g.\ Linux)
+      \begin{itemize}
+        \item Não é necessário passar mensagem
+        \item Mais rápido por ter acesso direto
+        \item Código passa a se tornar complicado e confuso (spaghetti code)
+        \item Pequenas (a às vezes aparentemente irrelevantes) mudanças podem quebrar o sistema
+        \item Mais difícil de manter código
+        \item Novos desenvolvedores sofrem tentando aprender código confuso
+      \end{itemize}
+  \end{description}
+\end{frame}
+
+\begin{frame}
+  \frametitle{História do Mach}
+  \begin{itemize}
+    \item Criado em 1984 na Carnegie-Mellon
+    \item Desenvolvimento do Mach terminou em 1994
+    \item GNU Hurd usa GNU Mach (versão modificada para ser \textit{free} e manter-se atualizado)
+    \item Microkernel/Nanokernel (alguns consideram ``Hybrid Kernel'')
+    \item Mensagens por meio do MIG (Mach Interface Generator)
+    \item MIG possibilita rodar código por RPC
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{O que Mach faz e não faz?}
+  \begin{description}
+    \item[Faz:]~\\
+      \begin{itemize}
+        \item Gerenciamento de Memória
+        \item Gerenciamento de Processos
+        \item Comunicações (mensagens dos outros servidores)
+        \item Entrada e Saída
+      \end{itemize}
+    \item [Não faz:]~\\
+      \begin{itemize}
+        \item Sistema de Arquivos
+        \item Drivers
+        \item Aplicativos de Usuário (WM, DE, etc.)
+      \end{itemize}
+  \end{description}
+\end{frame}
+
+\section{Multiservidor}
+
+\begin{frame}
+  \frametitle{Multiservidor}
+  \begin{itemize}
+    \item Rodam paralelamente ao Mach
+    \item Comunicam-se pelo MIG
+    \item Ficam na camada de usuário
+    \item Qualquer linguagem
+    \item Compilado como quiser
+    \item Debugar enquanto os outros servidores rodam
+    \item Independente de todos os outros servidores e kernel
+    \item Completamente modificável
+    \item Seguro (ficam em camada de usuário)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Alguns exemplos de servidores}
+  \begin{description}
+    \item[Core]~\\
+      \begin{itemize}
+        \item \code{auth} privilégios, senhas e identificação
+        \item \code{crash} erros
+        \item \code{exec} rodar executáveis
+        \item \code{fifo} pipes
+        \item \code{firmlink} ``half-way between a symbolic link and hard link''
+        \item \code{ifsock} sockets
+        \item \code{init} boot
+        \item \code{null} equivalente a \code{/dev/null} e \code{/dev/zero}
+        \item \code{procs} PIDs
+        \item \code{term} terminal
+        \item $\ldots$
+      \end{itemize}
+    \item[Filesystem]~\\
+      \begin{itemize}
+        \item \code{ext2fs}, \code{isofs}, \code{nfs}, \code{ufs}, \code{ftpfs}, \code{storeio}
+      \end{itemize}
+  \end{description}
+\end{frame}
 
 \section{Memória}
 
