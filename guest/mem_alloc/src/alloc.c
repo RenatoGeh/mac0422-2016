@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 /* ############################################################## */
+#include <stdio.h>
 #include <unistd.h>
 /* ############################################################## */
 #include "mproc.h"
@@ -63,7 +64,6 @@ FORWARD _PROTOTYPE( int swap_out, (void)				    );
  * FIRST_FIT, WORST_FIT, BEST_FIT and RANDOM_FIT. */
 
 PRIVATE int alloc_policy = FIRST_FIT;
-/* ############################################################## */
 
 /*===========================================================================*
  *        alloc_mem            *
@@ -77,15 +77,13 @@ phys_clicks clicks;   /* amount of memory requested */
  * always on a click boundary.  This procedure is called when memory is
  * needed for FORK or EXEC.  Swap other processes out if needed.
  */
-	int have_candidate_flag, possible_candidates, selected, i;
+	int candidate_flag, possible_candidates, selected, i;
 	register struct hole *hp, *prev_ptr;
-	register struct hole *worst_candidate, *worst_prev_ptr;
-	register struct hole *best_candidate, *best_prev_ptr;
+	register struct hole *candidate, *cand_prev_ptr;
 	phys_clicks old_base;
-
 	do {
 		if (alloc_policy == FIRST_FIT) {
-			prev_ptr = NIL_HOLE;
+      prev_ptr = NIL_HOLE;
 			hp = hole_head;
 
 			while (hp != NIL_HOLE && hp->h_base < swap_base) {
@@ -110,68 +108,80 @@ phys_clicks clicks;   /* amount of memory requested */
 				hp = hp->h_next;
 			}
 		} else if (alloc_policy == WORST_FIT) {
-			prev_ptr = hole_head;
+      prev_ptr = hole_head;
 			hp = hole_head->h_next;
 
-			worst_prev_ptr = NIL_HOLE;
-			worst_candidate = hole_head;
+			cand_prev_ptr = NIL_HOLE;
+			candidate = hole_head;
+      candidate_flag = 0;
+
+      if (candidate->h_len >= clicks)
+        candidate_flag = 1;
 
 			while (hp != NIL_HOLE && hp->h_base < swap_base) {
-				if (hp->h_len > worst_candidate->h_len) {
-					worst_prev_ptr = prev_ptr;
-					worst_candidate = hp;
+				if (hp->h_len > candidate->h_len && hp->h_len >= clicks) {
+					cand_prev_ptr = prev_ptr;
+					candidate = hp;
+          candidate_flag = 1;
 				}
 				prev_ptr = hp;
 				hp = hp->h_next;
 			}
 
-			if (worst_candidate->h_len >= clicks) {
-				old_base = worst_candidate->h_base;
-				worst_candidate->h_base += clicks;
-				worst_candidate->h_len -= clicks;
+			if (candidate_flag) {
+				old_base = candidate->h_base;
+				candidate->h_base += clicks;
+				candidate->h_len -= clicks;
 
-				if(worst_candidate->h_base > high_watermark)
-					high_watermark = worst_candidate->h_base;
+				if(candidate->h_base > high_watermark)
+					high_watermark = candidate->h_base;
 
-				if (worst_candidate->h_len == 0)
-					del_slot(worst_prev_ptr, worst_candidate);
+				if (candidate->h_len == 0)
+					del_slot(cand_prev_ptr, candidate);
 
 				return(old_base);
 			}
 		} else if (alloc_policy == BEST_FIT) {
-			prev_ptr = NIL_HOLE;
-			hp = hole_head;
+      prev_ptr = hole_head;
+			hp = hole_head->h_next;
 
-			best_prev_ptr = NIL_HOLE;
-			best_candidate = hole_head;
+			cand_prev_ptr = NIL_HOLE;
+			candidate = hole_head;
+			candidate_flag = 0;
 
-			have_candidate_flag = 0;
+      if (candidate->h_len >= clicks)
+        candidate_flag = 1;
 
 			while (hp != NIL_HOLE && hp->h_base < swap_base) {
-				if (hp->h_len <= best_candidate->h_len && hp->h_len >= clicks) {
-					best_prev_ptr = prev_ptr;
-					best_candidate = hp;
-					have_candidate_flag = 1;
+        if (!candidate_flag && hp->h_len >= clicks) {
+          cand_prev_ptr = prev_ptr;
+          candidate = hp;
+          candidate_flag = 1;
+        }
+        if (hp->h_len < candidate->h_len && hp->h_len >= clicks) {
+					cand_prev_ptr = prev_ptr;
+					candidate = hp;
+					candidate_flag = 1;
 				}
 				prev_ptr = hp;
 				hp = hp->h_next;
 			}
 
-			if (have_candidate_flag == 1) {
-				old_base = best_candidate->h_base;
-				best_candidate->h_base += clicks;
-				best_candidate->h_len -= clicks;
+			if (candidate_flag) {
+				old_base = candidate->h_base;
+				candidate->h_base += clicks;
+				candidate->h_len -= clicks;
 
-				if(best_candidate->h_base > high_watermark)
-					high_watermark = best_candidate->h_base;
+				if(candidate->h_base > high_watermark)
+					high_watermark = candidate->h_base;
 
-				if (best_candidate->h_len == 0)
-					del_slot(best_prev_ptr, best_candidate);
+				if (candidate->h_len == 0)
+					del_slot(cand_prev_ptr, candidate);
 
 				return(old_base);
 			}
 		} else if (alloc_policy == RANDOM_FIT) {
-			hp = hole_head;
+      hp = hole_head;
 
 			possible_candidates = 0;
 
@@ -219,11 +229,13 @@ phys_clicks clicks;   /* amount of memory requested */
 PUBLIC int do_alloc_algorithm(policy)
 int policy;
 {
+  /* Gets argument policy from message. */
+  policy = m_in.m1_i1;
 	if (policy != FIRST_FIT && policy != BEST_FIT
-			&& policy != WORST_FIT && policy != RANDOM_FIT)
-		return EINVAL; /* invalid argument error as defined in errno.h */
-	alloc_policy = policy;
-	return OK;
+			  && policy != WORST_FIT && policy != RANDOM_FIT)
+		  return EINVAL; /* invalid argument error as defined in errno.h */
+  alloc_policy = policy;
+  return OK;
 }
 /* ############################################################## */
 

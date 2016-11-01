@@ -1,0 +1,70 @@
+arquivos alterados:
+/usr/src/servers/pm/table.c
+/usr/src/servers/pm/misc.c
+/usr/src/servers/pm/proto.h
+/usr/src/lib/posix/Makefile.in
+/usr/src/include/minix/callnr.h
+/usr/include/minix/callnr.h
+
+arquivos adicionados:
+/usr/src/lib/posix/_fork_batch.c
+
+
+Implementação da chamada de sistema:
+
+O servidor responsável pela nossa função é o Proccess Manager, então seus arquivos que são modificados, que estão em 
+	
+	/usr/src/servers/pm/
+
+Primeiro, encontramos no arquivo table.c um endereço que não está sendo utilizado para alocar a nossa função. O endereço escolhido é o 64, então temos (linha 83 do arquivo):
+	
+	do_fork_batch,  	/* 64 = unused */
+
+Nossa função está implementada dentro do arquivo misc.c (linha 31), e declarada no arquivo proto.h (linha 60):
+
+	/* misc.c */
+	_PROTOTYPE( int do_fork_batch, (void) );
+
+Modificado esses três arquivos, o próximo passo foi compilar o Proccess Manager, utilizando o Makefile dentro de /usr/src/servers/
+
+	$/usr/src/servers/make image
+	$/usr/src/servers/make install
+
+Nesse ponto temos a função implementada, mas não disponível explicitamente para o usuário. Para isso, primeiro definimos a constante da nossa função nos arquivos (linha 58 em ambos):
+	/usr/src/include/minix/callnr.h:
+	/usr/include/minix/callnr.h:
+		#define FORK_BATCH 64
+
+Adicionamos também, uma função que encapsula a syscall, facilitando para o usuário. Ela está contida num arquivo novo
+
+	/usr/src/lib/posix/_fork_batch.c
+
+Precisamos inserir esse arquivo novo no Makefile, para poder ser compilado com a biblioteca, então adicionamos (linha 32)
+	
+	_fork_batch.c\
+à
+	/usr/src/lib/posix/Makefile.in
+	
+
+e depois executamos 
+
+	$.make Makefile
+
+É possível então fazer a nova biblioteca com: 
+
+	/usr/src/make libraries
+
+Agora é possível fazer a chamada de sistema utilizando o comando:
+
+	fork_batch()
+
+
+
+Para salvar essa nova configuração, precisamos criar uma imagem do sistema. Assim é possível dar boot nela em outras sessões.
+
+O comando é
+
+/usr/src/tools/make hdboot
+/usr/src/tools/make install
+
+criou o arquivo /boot/image/3.1.2ar1
