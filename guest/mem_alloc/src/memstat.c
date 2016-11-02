@@ -53,28 +53,47 @@ void getsysinfo(int who, int what, void *where) {
   _syscall(who, GETSYSINFO, &m);
 }
 
+int cmp_func(const void *lval, const void *rval) {
+  return *(int*)lval - *(int*)rval;
+}
+
 int mem_data(struct hole *holes, double *mean, double *median, double *stddev) {
   int n, i, t;
   struct hole *it = holes;
+  int *ord_chks;
   *mean = *median = *stddev = 0;
-  for (n = 0; it != NULL; ++n) {
-    *mean += (double) it->h_len;
-    it = it->h_next;
-  }
+  n = 0;
+  for (i = 0; i < _NR_HOLES; ++i)
+    if (holes[i].h_base && holes[i].h_len) {
+      int bytes;
+      bytes = holes[i].h_len << CLICK_SHIFT;
+      *mean += bytes/1024.;
+      ++n;
+    }
   if (n == 0) {
     *median = *stddev = 0;
     return n;
   }
   *mean /= (double) n;
+  ord_chks = (int*) malloc(n*sizeof(int));
+  for (t = i = 0; i < _NR_HOLES; ++i)
+    if (holes[i].h_base && holes[i].h_len) {
+      int bytes;
+      bytes = holes[i].h_len << CLICK_SHIFT;
+      ord_chks[t++] = bytes;
+    }
   t = n/2;
-  it = holes;
-  for (i = 0; i < n; i++) {
-    double k = (double) it->h_len - *mean;
-    if (i == t)
-      *median = (double) it->h_len;
-    *stddev += k*k;
-    it = it->h_next;
-  }
+  qsort(ord_chks, n, sizeof(int), cmp_func);
+  *median = ord_chks[t]/1024.;
+  free(ord_chks);
+  for (i = 0; i < _NR_HOLES; ++i)
+    if (holes[i].h_base && holes[i].h_len) {
+      int bytes;
+      double k;
+      bytes = holes[i].h_len << CLICK_SHIFT;
+      k = (double) bytes/1024. - *mean;
+      *stddev += k*k;
+    }
   *stddev = sqrt(*stddev/n);
   return n;
 }
@@ -82,10 +101,10 @@ int mem_data(struct hole *holes, double *mean, double *median, double *stddev) {
 void print_holes(void) {
   int n;
   double mean, median, stddev;
-  struct pm_mem_info store;
+  static struct pm_mem_info store;
 
   getsysinfo(MM, SI_MEM_ALLOC, &store);
   n = mem_data(store.pmi_holes, &mean, &median, &stddev);
 
-  printf("%d\t%.2f\t%.2f\t%.2f\n", n, mean, median, stddev);
+  printf("%d\t%.3f kB\t%.3f kB\t%.3f kB\n", n, mean, median, stddev);
 }
