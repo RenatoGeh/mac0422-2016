@@ -119,7 +119,7 @@ e o protótipo de função.
 + _PROTOTYPE(void alloc_algorithm, (int _policy));
 \end{lstlisting}
 
-Adiciona-se a macro que define a chamada de sistema:
+Adiciona-se a macro que define a chamada de sistema em \code{include/minix/callnr.h}:
 
 \begin{lstlisting}[frame=leftline,mathescape=true,style=nonumbers]
 -
@@ -136,7 +136,7 @@ servidores:
   #include <stdio.h>
 
   PUBLIC void alloc_algorithm(_policy)
-  int _policyç
+  int _policy;
   {
     message m;
     m.m1_i1 = _policy;
@@ -404,33 +404,56 @@ iremos guardar tal informação em um \code{struct pm_mem_info}, que representa 
   int mem_data(struct hole *holes, double *mean, double *median, double *stddev) {
     int n, i, t;
     struct hole *it = holes;
+    int *ord_chks;
     *mean = *median = *stddev = 0;
-    for (n = 0; it != NULL; ++n) {
-      *mean += (double) it->h_len;
-      it = it->h_next;
-    }
+    n = 0;
+    for (i = 0; i < _NR_HOLES; ++i)
+      if (holes[i].h_base && holes[i].h_len) {
+        int bytes;
+        bytes = holes[i].h_len << CLICK_SHIFT;
+        *mean += bytes/1024.;
+        ++n;
+      }
     if (n == 0) {
       *median = *stddev = 0;
       return n;
     }
     *mean /= (double) n;
+    ord_chks = (int*) malloc(n*sizeof(int));
+    for (t = i = 0; i < _NR_HOLES; ++i)
+      if (holes[i].h_base && holes[i].h_len) {
+        int bytes;
+        bytes = holes[i].h_len << CLICK_SHIFT;
+        ord_chks[t++] = bytes;
+      }
     t = n/2;
-    it = holes;
-    for (i = 0; i < n; i++) {
-      double k = (double) it->h_len - *mean;
-      if (i == t)
-        *median = (double) it->h_len;
-      *stddev += k*k;
-      it = it->h_next;
-    }
+    qsort(ord_chks, n, sizeof(int), cmp_func);
+    *median = ord_chks[t]/1024.;
+    free(ord_chks);
+    for (i = 0; i < _NR_HOLES; ++i)
+      if (holes[i].h_base && holes[i].h_len) {
+        int bytes;
+        double k;
+        bytes = holes[i].h_len << CLICK_SHIFT;
+        k = (double) bytes/1024. - *mean;
+        *stddev += k*k;
+      }
     *stddev = sqrt(*stddev/n);
     return n;
   }
 \end{minted}
 
-A função \code{mem_data} itera pela lista de buracos \code{struct hole *holes} e computa a média,
-mediana e desvio padrão. Ao final, retorna o número de elementos e guarda os valores nos endereços
-dados.
+Como os tamanhos dos buracos estão em \code{clicks}, precisamos transforma-los em bytes antes. Para
+isso, usamos \code{CLICK_SHIFT}, que é simplesmente uma constante definida pelo real tamanho do
+click \code{CLICK_SIZE}. Assim, podemos fazer o \textit{shift-left} para multiplicar o número real
+em bytes em cada click pelo número de clicks. Durante a instalação do Minix, foi decidido durante a
+configuração que \code{CLICK_SIZE} fosse \code{4096}. Assim que fazemos o \textit{shift} temos o
+tamanho em bytes. No entanto, como o tamanho em bytes será muito grande, decidimos representar os
+kilobytes ao invés. Em \code{mem_data}, primeiro computamos a média, contando o número real de
+buracos na memória. Em seguida, copiamos os tamanhos em um vetor, ordenamos de acordo com uma
+função crescente \code{cmp_func} e selecionamos a mediana. Ao final, computamos o desvio padrão.
+Retornamos o número de elementos e guardamos os valores da média, mediana e desvio padrão nos
+endereços dados.
 
 \section{Testes}
 
