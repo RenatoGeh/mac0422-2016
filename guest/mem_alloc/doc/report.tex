@@ -88,8 +88,7 @@ Os arquivos modificados foram:
 \end{itemize}
 
 As versões modificadas estão em \code{/usr/local/}, assim como os arquivos não modificados. Deste
-jeito, pode-se rodar \code{/usr/local/src/tools/Makefile} sem alterar o código original. Três
-arquivos foram adicionados:
+jeito, pode-se rodar \code{/usr/local/src/tools/Makefile} sem alterar o código original. Um arquivo foi adicionado:
 
 \begin{itemize}
   \item \code{/usr/local/src/lib/posix/_alloc_algorithm.c}
@@ -456,6 +455,112 @@ Retornamos o número de elementos e guardamos os valores da média, mediana e de
 endereços dados.
 
 \section{Testes}
+
+Para testar os algoritmos, nós utilizamos o programa \code{forkmem} (fornecido de material) para gerar vários processos que consomem diferentes porções de memória, e para visualizar a mudança nos buracos de memória, usamos o \code{memstat}, já descrito anteriormente.
+
+Criamos dois scripts simples para facilitar a execução de testes, são eles:
+
+testmem01
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+#!/bin/sh
+
+# 1 3 6 12 16 24 32 40
+
+./memstat 6 > $1 &
+./forkmem 32+0+2 32+0+3 32+0+4 12+2+3 12+2+4 12+2+5 3+3+4 3+3+4 3+3+4 3+3+5 3+3+5 3+3+5
+\end{minted}
+
+
+Esse script executa o \code{memstat}, enviando a sua saída para um arquivo passado como argumento, e, em paralelo, executa o \code{forkmem} com uma série de processos.
+
+No instante 0: são criados três processos de 32 MB, que acabam nos instantes 2, 3 e 4.
+
+No instante 2: um processo de 32 MB é encerrado, liberando memória. Logo em seguida, outros três processos de 12 MB são criados, para se encerrarem nos instantes 3, 4 e 5. (Note que dois deles cabem no buraco de 32 MB liberado, mas o terceiro precisa de outro buraco)
+
+No instante 3: um processo de 32 MB e um de 12 MB são encerrados. Seis processos de 3 MB são criados, três para se encerrarem no instante 4 e os outros três, no instante 5.
+
+No instante 4: um processo de 32 MB, um de 12 MB, e três de 3 MB são encerrados.
+
+No instante 5: um processo de 12 MB, e três de 3 MB são encerrados.
+
+No instante 6: nada acontece, esse segundo a mais que o \code{memstat} observa é somente para dar uma pausa entre execuções.
+
+e
+
+fulltest01.sh
+
+
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+#!/bin/sh
+
+./change_allocation_policy first_fit
+./testmem01 output_first_fit_01
+
+./change_allocation_policy worst_fit
+./testmem01 output_worst_fit_01
+
+./change_allocation_policy best_fit
+./testmem01 output_best_fit_01
+
+./change_allocation_policy random_fit
+./testmem01 output_random_fit_01
+\end{minted}
+
+
+Este script somente troca a política e executa o script anterior, passando o nome do arquivo no qual os resultados serão salvos.
+
+Resultados:
+
+First Fit:
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+ .6  173123.333 kB  60.000  kB  387026.100 kB
+ .8  117498.500 kB  100.000 kB  310702.486 kB
+ .9  108098.667 kB  100.000 kB  294137.151 kB
+ .9  103956.444 kB  100.000 kB  291042.895 kB
+ .10  94926.400 kB  116.000 kB  277469.849 kB
+ .10  98218.400 kB  116.000 kB  276770.808 kB
+ .11  90418.545 kB  116.000 kB  265040.812 kB
+\end{minted}
+
+Worst Fit:
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+ .10  100578.800 kB  116.000 kB  301471.074 kB
+ .12   78332.333 kB  116.000 kB  259479.364 kB
+ .13   74837.538 kB  116.000 kB  249593.485 kB
+ .15   64567.200 kB  132.000 kB  223890.411 kB
+ .21   45203.048 kB  132.000 kB  187186.505 kB
+ .19   51693.895 kB  132.000 kB  196179.738 kB
+ .19   52347.579 kB  132.000 kB  196027.474 kB
+\end{minted}
+
+Best Fit:
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+ .9   111754.222 kB  100.000 kB  315889.273 kB
+ .9   104443.111 kB  100.000 kB  295210.328 kB
+ .10   97288.800 kB  116.000 kB  280882.327 kB
+ .11   88046.182 kB  116.000 kB  265468.727 kB
+ .11   86296.727 kB  116.000 kB  265915.924 kB
+ .11   89289.455 kB  116.000 kB  265338.156 kB
+ .12   82883.667 kB  116.000 kB  254928.783 kB
+\end{minted}
+
+Random Fit:
+\begin{minted}[linenos=true,gobble=2,frame=lines]{c}
+ .8   125723.500 kB  100.000 kB  332419.951 kB
+ .8   117498.500 kB  100.000 kB  310658.647 kB
+ .9   108098.667 kB  100.000 kB  294095.988 kB
+ .11   88046.182 kB  132.000 kB  265426.831 kB
+ .11   86296.727 kB  132.000 kB  263846.872 kB
+ .10   98218.400 kB  152.000 kB  274524.072 kB
+ .11   90418.545 kB  152.000 kB  262908.005 kB
+\end{minted}
+
+
+Nesse teste, os resultados não mostram muitas variações entre cada política. O que mais se destaca é o Worst Fit. Ele gera uma quantidade muito maior de buracos ao longo das execuções, com a média de cada um muito menor (aproximadamente a metade dos outros). Vemos que o First Fit tem uma quantidade menor de buracos no começo da execução, mas, pela construção do exemplo, termina com valores similares ao Best e Random Fit. Por fim, o Best Fit termina com um buraco a mais, por isso tem uma média de tamanho de buracos um pouco menor do que os outros (além do Worst).
+
+
+
 
 \section{Observações importantes quanto a execução do EP}
 
