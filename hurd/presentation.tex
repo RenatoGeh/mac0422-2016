@@ -175,9 +175,9 @@
 
   \begin{itemize}
     \item Horrível
-    \item Escasso
-    \item IRC
-    \item Confuso
+    \item Escassa
+    \item Conversas no IRC
+    \item Confusa
     \item Alinear
     \item Feito pela comunidade
     \item Página de \textit{open issues}
@@ -373,11 +373,47 @@
 \section{Sistema de Arquivos}
 
 \begin{frame}
-  \frametitle{File system no GNU Hurd}
+  \frametitle{Filesystem no GNU Hurd}
+  \begin{description}
+    \item[Translators:]~\\
+    \begin{itemize}
+      \item Por \textit{i-nodes}
+      \item Vários tradutores (servidores) para \code{fs}
+      \item Cada tradutor é um tipo de formato
+      \item Exemplos: \code{ext2fs}, \code{fatfs}, \code{ufs}, \code{isofs}
+      \item Uma busca referencia uma \code{port} (uma porta para comunicar-se com o kernel)
+    \end{itemize}
+  \end{description}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Filesystem no GNU Hurd}
+  A ideia: ao invés de uma lista telefônica contendo arquivos, temos uma árvore de busca que
+  retorna uma porta para um servidor que pode acessar o arquivo.
+
+  \begin{quote}
+    ``So we don't have a single phone book listing all servers, but rather a tree of servers
+    keeping track of each other. That's really like calling your friend and asking for the phone
+    number of the blond girl at the party yesterday. He might refer you to a friend who hopefully
+    knows more about it. Then you have to retry.''
+
+    \hfill --- Markus Brinkmann
+  \end{quote}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Filesystem no GNU Hurd}
+
+  Usando-se uma árvore de busca de \textit{translators} possibilita algumas coisa bem
+  interessantes:
+
   \begin{itemize}
-    \item Por \textit{i-nodes}
-    \item \code{ext2fs}
+    \item \code{nfs}
+    \item \code{ftpfs}
   \end{itemize}
+
+  Isso significa acesso transparente a servidores FTP no próprio filesystem. Usando-se o translator
+  \code{ftpfs}, o usuário não precisa se preocupar com protocolos de rede.
 \end{frame}
 
 \section{Comparação}
