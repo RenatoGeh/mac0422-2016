@@ -170,6 +170,21 @@
 
 \end{frame}
 
+\begin{frame}
+  \frametitle{Documentação}
+
+  \begin{itemize}
+    \item Horrível
+    \item Escasso
+    \item IRC
+    \item Confuso
+    \item Alinear
+    \item Feito pela comunidade
+    \item Página de \textit{open issues}
+    \item Recompensas (\$\$\$) para quem resolver
+  \end{itemize}
+\end{frame}
+
 \section{Arquitetura Geral}
 
 \begin{frame}
@@ -265,6 +280,7 @@
     \item Independente de todos os outros servidores e kernel
     \item Completamente modificável
     \item Seguro (ficam em camada de usuário)
+    \item Não é preciso dar reboot para testar
   \end{itemize}
 \end{frame}
 
@@ -294,11 +310,75 @@
 
 \section{Memória}
 
+\begin{frame}
+  \frametitle{Memória no GNU Mach}
+  \begin{itemize}
+    \item 32-bit
+    \item 2GB kernelspace
+    \item 2GB userspace
+    \item Mach cuida de toda memória virtual
+    \item Pedidos de memória pelos processos feitos por mensagens
+    \item Mach retorna um ponteiro para a memória e o tamanho alocado
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Escalonamento}
+  Gerenciamento de memória por meio de uma Red-Black Tree (RBT) e usando Best-fit.
+
+  Red-black tree é uma BST com espaço $\bigo(n)$ e operações $\bigo(\log n)$.
+
+  Blocos: lista duplamente ligada.
+
+  Usa-se uma RBT para ordenar os blocos em tamanho. Acha o melhor fit em tempo $\bigo(\log n)$.
+  Modificar a lista é feito em $\bigo(1)$ já que é duplamente ligada.
+
+  Complexidade final é $\bigo(\log n)$.
+
+  (BSD, Linux, entre outros)
+\end{frame}
+
 \section{Escalonamento de Processos}
+
+\begin{frame}
+  \frametitle{Processos no GNU Mach}
+  \begin{description}
+    \item[Kernelspace:]~\\
+      \begin{itemize}
+        \item Usa \textit{continuations} (estrutura que guarda informação do processo)
+        \item Continuations usam menos espaço pois não precisam da pilha de threads do kernel
+        \item Não é preemptivo (por causa de continuations)
+        \item Ser preemptivo requer toda a pilha de threads do kernel
+        \item Escalonamento feito pelo Mach
+        \item Escalonamento 1:1 (igual a Solaris, NetBSD, FreeBSD, OS X, iOS, OS/2 e Win32)
+        \item Escalonamento feito por filas de prioridade
+      \end{itemize}
+  \end{description}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Processos no GNU Mach}
+  \begin{description}
+    \item[Userspace:]~\\
+      \begin{itemize}
+        \item Threads
+        \item \code{libthreads}
+        \item \code{libports}
+        \item Servidores tem maior prioridade que user threads
+        \item Não suporta múltiplas CPUs (anos 90)
+      \end{itemize}
+  \end{description}
+\end{frame}
 
 \section{Sistema de Arquivos}
 
-\section{Cache e TLB}
+\begin{frame}
+  \frametitle{File system no GNU Hurd}
+  \begin{itemize}
+    \item Por \textit{i-nodes}
+    \item \code{ext2fs}
+  \end{itemize}
+\end{frame}
 
 \section{Comparação}
 
