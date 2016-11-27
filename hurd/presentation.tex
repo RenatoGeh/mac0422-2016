@@ -90,7 +90,7 @@
 
 \title{GNU Hurd}
 \subtitle{MAC0422 --- Estudo de Caso}
-\author{Renato Lui Geh}
+\author{Renato Lui Geh\\ NUSP:\@ 8536030}
 
 \begin{document}
 
@@ -416,7 +416,73 @@
   \code{ftpfs}, o usuário não precisa se preocupar com protocolos de rede.
 \end{frame}
 
+\section{Mensagens}
+
+\begin{frame}
+  \frametitle{O que o MIG (Mach Interface Generator) faz?}
+  \begin{itemize}
+    \item Serializa mensagens.
+    \item Traduz mensagens.
+    \item Envia mensagens.
+    \item Recebe mensagens.
+    \item Parecido com redes.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{MIG (Mach Interface Generator)}
+  \begin{lstlisting}[mathescape=true,showstringspaces=false,numbers=none,frame=single]
+<teythoon> btw, I just realized that mig mashes two very different things
+  together, namely the serialization/parsing and the message
+  sending/receiving
+<braunr> yes
+<teythoon> I'd prefer it if that were separated
+<braunr> me too
+<braunr> that's why i want x15 to have a bare messaging interface .. :)
+<teythoon> \o/
+<braunr> simple (but optimized) scatter-gather
+<braunr> it makes sense for mig since mach messages do include
+  serialization metadata such as types
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}
+  \frametitle{MIG (Mach Interface Generator)}
+  \begin{itemize}
+    \item Processo 1 transforma código em mensagens.
+    \item Mensagem é então enviada para processo 2.
+    \item Mensagem é traduzida pelo MIG, gerando código C dentro do processo 2.
+    \item Processo 2 roda o código.
+  \end{itemize}
+\end{frame}
+
 \section{Comparação}
+
+\begin{frame}
+  \frametitle{GNU Hurd vs GNU/Linux}
+  Vantagens do GNU Hurd em relação ao GNU/Linux:
+  \begin{itemize}
+    \item Microkernel
+    \item Multiservidor
+    \item Flexível
+    \item Peças independentes entre si
+    \item Comunidade entusiasmada
+    \item Completamente GNU
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{GNU Hurd vs GNU/Linux}
+  Desvantagens do GNU Hurd em relação ao GNU/Linux:
+  \begin{itemize}
+    \item Menor performance
+    \item Decisões antiquadas causaram problemas no futuro
+    \item Minúscula comunidade e número de desenvolvedores
+    \item Instável
+    \item Falta muita coisa a ser feita
+    \item Documentação escassa e ruim
+  \end{itemize}
+\end{frame}
 
 %--------------------------------------------------------------------------------------------------
 
