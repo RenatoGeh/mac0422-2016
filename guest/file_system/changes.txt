@@ -1,0 +1,8 @@
+inode.c
+inode.h
+callnr.h
+proto.h
+table.c
+posix/_lsr.c
+posix/Makefile.in
+open.c
