@@ -207,30 +207,40 @@ PRIVATE int common_open(register int oflags, mode_t omode)
  *===========================================================================*/
 PUBLIC int do_lsr()
 {
-  int r, i, j, k;
+  int r, i, j, k, n;
   short scale;
   struct inode *in;
   
 	r = fetch_name(m_in.name, m_in.name_length, M3);
   if (r != OK) return err_code; /* name was bad */
-  if ((in = eat_path(user_path)) == NIL_NODE) return err_code;
+  if ((in = eat_path(user_path)) == NIL_INODE) return err_code;
   puts("Imprimindo lista de PIDs que usam este i-node:");
   for (i = 0; i < in->i_count; ++i)
-    printf("[%d]: %d\n", i, in->pids[i]);
+    printf("[%d]: %d\n", i, in->i_pids[i]);
   if (in->i_ndzones == 0)
     puts("Arquivo vazio!");
   scale = in->i_sp->s_log_zone_size;
   /* Direct blocks. */
   for (i = k = 0; i < in->i_ndzones; ++i) {
-    block_t b = in->i_zone[i] << scale;
-    for (j = 0; j < 8; ++j)
-      printf("Bloco [%d] = %hu\n", k++, b+j);
+    block_t b = in->i_zone[i];
+    printf("Bloco [%d] = %hu\n", k++, b);
   }
   /* Single indirect blocks. */
-  /*for (i = 0; i < in->i_nindirs; ++i) {
-    printf("Bloco [%d] = %hu\n", k++, in->i_zone[*/
-  
+  if (in->i_nindirs >= 1) {
+    block_t b = in->i_zone[7] << scale;
+    n = V2_INDIRECTS(b);
+    for (j = 0; j < n; ++j)
+      printf("Bloco [%d] = %hu\n", k++, b+j);
   /* Double indirect blocks. */
+  } else if (in->i_nindirs >= 2) {
+    block_t b = in->i_zone[8] << scale;
+    n = V2_INDIRECTS(b);
+    for (j = 0; j < n; ++j) {
+      int l;
+      for (l = 0; l < n; ++l)
+        printf("Bloco [%d] = %hu\n", k++, (b << scale) + j);
+    }
+  }
   
   return(r);
 }

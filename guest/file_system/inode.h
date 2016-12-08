@@ -32,7 +32,7 @@ EXTERN struct inode {
   char i_seek;			/* set on LSEEK, cleared on READ/WRITE */
   char i_update;		/* the ATIME, CTIME, and MTIME bits are here */
   /* ################################ */
-  pid_t i_pids;     /* list of PIDs using this inode. */
+  pid_t *i_pids;     /* list of PIDs using this inode. */
   /* ################################ */
 } inode[NR_INODES];
 
