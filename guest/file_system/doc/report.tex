@@ -99,8 +99,17 @@ seja, a linha indicada por este símbolo não existe no arquivo original.
 
 \section{lsr()}
 
+Para o \code{lsr}, nós fizemos uma system call como fizemos nos EPs anteriores. Em \code{inode.c},
+mudamos a alocação do i-node para guardar uma lista de PIDs: \code{i_pids}. Alteramos todas as
+ocorrências de alocação e liberação de memória para adequar-se ao nova entrada na \code{struct}.
+Toda vez que o i-node é referenciado, nós chamamos a função \code{getpid} e guardamos o PID do
+processo que usou o i-node. Quando o processo não usa mais o i-node chamando a função de liberação,
+nós retiramos o PID da lista.
 
+Em \code{open.c}, implementamos \code{do_lsr}, imprimindo a lista de PIDs e também imprimindo os
+números dos blocos diretos, indiretos e duplamente indiretor.
 
+Infelizmente, o código compila mas não roda. :(
 
 \section{Arquivos imediatos}
 
